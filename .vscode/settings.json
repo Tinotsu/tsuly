@@ -9,7 +9,7 @@
   },
   "files.readonlyInclude": {
     "**/routeTree.gen.ts": true,
-    // "**/.adonisjs/**": true
+    "**/.adonisjs/**": true
   },
   "oxc.typeAware": true,
   "oxc.fmt.experimental": true,
