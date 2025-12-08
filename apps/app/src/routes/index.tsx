@@ -14,10 +14,10 @@ function App() {
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
       <div className="max-w-3xl mx-auto px-4 text-center">
-        <h1 className="text-4xl font-bold tracking-tight sm:text-6xl mb-6">
-          Welcome to StarterKit
+        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl mb-6">
+          AdonisJS Monorepo Starter Kit
         </h1>
-        <p className="text-lg text-gray-600 mb-8">
+        <p className="text-sm text-gray-300 mb-8">
           A minimal, clean starter template for building modern web applications.
         </p>
         <div className="flex gap-4 justify-center">
