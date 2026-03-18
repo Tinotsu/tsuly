@@ -26,7 +26,7 @@ export default class AuthController {
   async getMe({ auth, serialize }: HttpContext) {
     const user = auth.getUserOrFail()
 
-    return await serialize(UserTransformer.transform(user))
+    return await serialize.withoutWrapping(UserTransformer.transform(user))
   }
 
   async isAuthenticated({ auth }: HttpContext) {
