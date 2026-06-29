@@ -89,6 +89,35 @@ const brandIcons: Record<string, ComponentType<{ className?: string }>> = {
   context: FileText,
 }
 
+const BRAND_BRAIN_CARD_WORD_LIMIT = 500
+const BRAND_BRAIN_CARD_LINE_CAPACITY = 5
+const BRAND_BRAIN_CARD_LINE_HEIGHT_REM = 1.5
+
+function countWords(text: string) {
+  const trimmed = text.trim()
+  if (!trimmed) return 0
+  return trimmed.split(/\s+/).length
+}
+
+function limitToWords(text: string, max: number) {
+  if (countWords(text) <= max) return text
+
+  const leading = text.match(/^\s*/)?.[0] ?? ''
+  return `${leading}${text.trim().split(/\s+/).slice(0, max).join(' ')}`
+}
+
+function limitCardValue(textarea: HTMLTextAreaElement, value: string) {
+  let next = limitToWords(value, BRAND_BRAIN_CARD_WORD_LIMIT)
+  textarea.value = next
+
+  while (next.length > 0 && textarea.scrollHeight > textarea.clientHeight) {
+    next = next.slice(0, -1)
+    textarea.value = next
+  }
+
+  return next
+}
+
 function App() {
   const { data: workspace } = useSuspenseQuery(
     query.workspace.show.queryOptions({}, { staleTime: 30_000 }),
@@ -582,11 +611,15 @@ function BrandBrainView({
                 value={field.value}
                 onChange={event =>
                   updateDraftField(draftSelectedSection.id, field.id, {
-                    value: event.target.value,
+                    value: limitCardValue(event.target, event.target.value),
                   })
                 }
                 onBlur={() => saveDraftField(draftSelectedSection, field)}
-                className="mt-2 w-full resize-none bg-transparent text-sm font-medium text-muted-foreground outline-none focus:text-foreground"
+                rows={BRAND_BRAIN_CARD_LINE_CAPACITY}
+                style={{
+                  height: `${BRAND_BRAIN_CARD_LINE_CAPACITY * BRAND_BRAIN_CARD_LINE_HEIGHT_REM}rem`,
+                }}
+                className="mt-2 w-full resize-none overflow-hidden bg-transparent text-sm font-medium leading-6 text-muted-foreground outline-none focus:text-foreground"
               />
             </div>
           ))}
