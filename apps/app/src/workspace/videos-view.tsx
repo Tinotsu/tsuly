@@ -4,13 +4,17 @@ import {
   Check,
   ChevronDown,
   Clapperboard,
+  Download,
   FileText,
+  Film,
   Mic2,
   Plus,
   Search,
   Send,
   Trash2,
+  X,
 } from 'lucide-react'
+import { useState } from 'react'
 
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -101,6 +105,17 @@ export function VideosView({
 }
 
 function VideoDetail({ video }: { video: Video }) {
+  const [publishOpen, setPublishOpen] = useState(false)
+  const finalVideoUrl = video.editingJob?.finalPath
+    ? `${apiBaseUrl}${video.editingJob.finalPath}`
+    : ''
+  const finalDownloadUrl = `${apiBaseUrl}/content/videos/${video.id}/final.mp4`
+  const finalFileName = `${
+    video.title
+      .replace(/[^a-z0-9]+/gi, '-')
+      .replace(/^-|-$/g, '')
+      .toLowerCase() || 'video'
+  }.mp4`
   const deleteRecording = useMutation({
     mutationFn: async (recordingId: string) => {
       const response = await fetch(
@@ -120,6 +135,15 @@ function VideoDetail({ video }: { video: Video }) {
       })
     },
   })
+
+  function downloadFinalVideo() {
+    if (!finalVideoUrl) return
+
+    const anchor = document.createElement('a')
+    anchor.href = finalDownloadUrl
+    anchor.download = finalFileName
+    anchor.click()
+  }
 
   return (
     <aside className="rounded-lg border bg-card">
@@ -170,6 +194,35 @@ function VideoDetail({ video }: { video: Video }) {
             'No takes yet'
           )}
         </DetailBlock>
+        <DetailBlock title="Final edit">
+          {video.editingJob?.status === 'ready' && finalVideoUrl ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium text-emerald-700">
+                <Film className="size-4" />
+                Rendered MP4 ready
+              </div>
+              <div className="mx-auto w-full max-w-[260px] overflow-hidden rounded-md bg-black">
+                <video
+                  src={finalVideoUrl}
+                  className="aspect-[9/16] w-full object-cover"
+                  controls
+                  playsInline
+                  preload="metadata"
+                />
+              </div>
+            </div>
+          ) : video.editingJob?.status === 'failed' ? (
+            <span className="text-destructive">
+              {video.editingJob.errorMessage || 'Render failed'}
+            </span>
+          ) : video.editingJob?.status === 'processing' ? (
+            'Rendering final MP4'
+          ) : video.editingJob?.status === 'queued' ? (
+            'Final edit queued'
+          ) : (
+            'No final edit yet'
+          )}
+        </DetailBlock>
         <DetailBlock title="Editing">
           <div className="space-y-2">
             {video.editing.map(item => (
@@ -212,11 +265,55 @@ function VideoDetail({ video }: { video: Video }) {
           <Check />
           Validate
         </Button>
-        <Button type="button">
+        <Button type="button" disabled={!finalVideoUrl} onClick={() => setPublishOpen(true)}>
           <Send />
           Publish
         </Button>
       </div>
+
+      {publishOpen && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4">
+          <div className="w-full max-w-md rounded-lg border bg-card shadow-lg">
+            <div className="flex items-center justify-between gap-3 border-b p-4">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Publish</p>
+                <h3 className="text-lg font-semibold">Preview final MP4</h3>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => setPublishOpen(false)}
+                aria-label="Close publish preview"
+              >
+                <X />
+              </Button>
+            </div>
+
+            <div className="space-y-4 p-4">
+              <div className="mx-auto w-full max-w-[260px] overflow-hidden rounded-md bg-black">
+                <video
+                  src={finalVideoUrl}
+                  className="aspect-[9/16] w-full object-cover"
+                  controls
+                  playsInline
+                  preload="metadata"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setPublishOpen(false)}>
+                  Close
+                </Button>
+                <Button type="button" onClick={downloadFinalVideo}>
+                  <Download />
+                  Download MP4
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   )
 }

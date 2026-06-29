@@ -1,5 +1,6 @@
 import { HttpContext } from '@adonisjs/core/http'
 import app from '@adonisjs/core/services/app'
+import { createReadStream } from 'node:fs'
 
 import WorkspaceService from '../services/workspace_service.ts'
 import { enqueueVideoEditingJob } from '../services/video_editing_queue.ts'
@@ -141,5 +142,16 @@ export default class WorkspaceController {
     )
 
     return await serialize.withoutWrapping(result)
+  }
+
+  async downloadFinalVideo({ auth, params, response }: HttpContext) {
+    const user = auth.getUserOrFail()
+    const result = await workspaceService.getFinalVideo(user.id, params.id)
+    const filePath = app.publicPath(result.finalPath.replace(/^\/+/, ''))
+
+    response.header('Content-Type', 'video/mp4')
+    response.header('Content-Disposition', `attachment; filename="${result.fileName}"`)
+
+    return response.stream(createReadStream(filePath))
   }
 }

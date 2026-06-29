@@ -163,6 +163,18 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['uploadRecording']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
   }
+  'workspace.download_final_video': {
+    methods: ["GET","HEAD"]
+    pattern: '/content/videos/:id/final.mp4'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['downloadFinalVideo']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['downloadFinalVideo']>>>
+    }
+  }
   'workspace.delete_recording': {
     methods: ["DELETE"]
     pattern: '/content/videos/:videoId/recordings/:recordingId'

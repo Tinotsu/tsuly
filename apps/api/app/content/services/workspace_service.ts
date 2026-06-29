@@ -543,6 +543,26 @@ export default class WorkspaceService {
     return { video: this.serializeVideo(await this.getVideo(userId, video.id)) }
   }
 
+  async getFinalVideo(userId: string, videoId: string) {
+    const video = await this.getVideo(userId, videoId)
+    const editingJob = await VideoEditingJob.query()
+      .where('video_id', video.id)
+      .where('status', 'ready')
+      .whereNotNull('final_path')
+      .orderBy('created_at', 'desc')
+      .firstOrFail()
+
+    return {
+      finalPath: editingJob.finalPath!,
+      fileName: `${
+        video.title
+          .replace(/[^a-z0-9]+/gi, '-')
+          .replace(/^-|-$/g, '')
+          .toLowerCase() || 'video'
+      }.mp4`,
+    }
+  }
+
   async updateBrandBrainField(
     userId: string,
     fieldId: string,

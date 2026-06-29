@@ -84,6 +84,12 @@ const routes = {
     tokens: [{"old":"/content/videos/:id/recordings","type":0,"val":"content","end":""},{"old":"/content/videos/:id/recordings","type":0,"val":"videos","end":""},{"old":"/content/videos/:id/recordings","type":1,"val":"id","end":""},{"old":"/content/videos/:id/recordings","type":0,"val":"recordings","end":""}],
     types: placeholder as Registry['workspace.upload_recording']['types'],
   },
+  'workspace.download_final_video': {
+    methods: ["GET","HEAD"],
+    pattern: '/content/videos/:id/final.mp4',
+    tokens: [{"old":"/content/videos/:id/final.mp4","type":0,"val":"content","end":""},{"old":"/content/videos/:id/final.mp4","type":0,"val":"videos","end":""},{"old":"/content/videos/:id/final.mp4","type":1,"val":"id","end":""},{"old":"/content/videos/:id/final.mp4","type":0,"val":"final.mp4","end":""}],
+    types: placeholder as Registry['workspace.download_final_video']['types'],
+  },
   'workspace.delete_recording': {
     methods: ["DELETE"],
     pattern: '/content/videos/:videoId/recordings/:recordingId',
