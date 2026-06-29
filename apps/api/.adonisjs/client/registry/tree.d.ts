@@ -14,5 +14,8 @@ export interface ApiDefinition {
     portal: typeof routes['billing.portal']
     webhook: typeof routes['billing.webhook']
   }
+  workspace: {
+    show: typeof routes['workspace.show']
+  }
   healthChecks: typeof routes['health_checks']
 }

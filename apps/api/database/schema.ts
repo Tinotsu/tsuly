@@ -7,6 +7,122 @@
 import { BaseModel, column } from '@adonisjs/lucid/orm'
 import { DateTime } from 'luxon'
 
+export class BrandBrainFieldSchema extends BaseModel {
+  static $columns = [
+    'brandBrainSectionId',
+    'createdAt',
+    'id',
+    'label',
+    'sortOrder',
+    'updatedAt',
+    'value',
+  ] as const
+  $columns = BrandBrainFieldSchema.$columns
+  @column()
+  declare brandBrainSectionId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare label: string
+  @column()
+  declare sortOrder: number
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+  @column()
+  declare value: string
+}
+
+export class BrandBrainSectionSchema extends BaseModel {
+  static $columns = [
+    'createdAt',
+    'id',
+    'key',
+    'sortOrder',
+    'summary',
+    'title',
+    'updatedAt',
+    'userId',
+  ] as const
+  $columns = BrandBrainSectionSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare key: string
+  @column()
+  declare sortOrder: number
+  @column()
+  declare summary: string
+  @column()
+  declare title: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+  @column()
+  declare userId: string
+}
+
+export class IdeaKeyPointSchema extends BaseModel {
+  static $columns = ['body', 'createdAt', 'id', 'ideaId', 'sortOrder', 'updatedAt'] as const
+  $columns = IdeaKeyPointSchema.$columns
+  @column()
+  declare body: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare ideaId: string
+  @column()
+  declare sortOrder: number
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+}
+
+export class IdeaSchema extends BaseModel {
+  static $columns = [
+    'createdAt',
+    'cta',
+    'hook',
+    'id',
+    'pillar',
+    'problem',
+    'rating',
+    'sortOrder',
+    'status',
+    'title',
+    'updatedAt',
+    'userId',
+  ] as const
+  $columns = IdeaSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare cta: string
+  @column()
+  declare hook: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare pillar: string
+  @column()
+  declare problem: string
+  @column()
+  declare rating: number
+  @column()
+  declare sortOrder: number
+  @column()
+  declare status: string
+  @column()
+  declare title: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+  @column()
+  declare userId: string
+}
+
 export class UserSchema extends BaseModel {
   static $columns = [
     'createdAt',
@@ -41,4 +157,114 @@ export class UserSchema extends BaseModel {
   declare subscriptionStatus: string | null
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
+}
+
+export class VideoEditingTaskSchema extends BaseModel {
+  static $columns = [
+    'createdAt',
+    'done',
+    'id',
+    'label',
+    'sortOrder',
+    'updatedAt',
+    'videoId',
+  ] as const
+  $columns = VideoEditingTaskSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare done: boolean
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare label: string
+  @column()
+  declare sortOrder: number
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+  @column()
+  declare videoId: string
+}
+
+export class VideoRecordingSchema extends BaseModel {
+  static $columns = ['createdAt', 'id', 'label', 'sortOrder', 'updatedAt', 'videoId'] as const
+  $columns = VideoRecordingSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare label: string
+  @column()
+  declare sortOrder: number
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+  @column()
+  declare videoId: string
+}
+
+export class VideoStageSchema extends BaseModel {
+  static $columns = [
+    'createdAt',
+    'done',
+    'id',
+    'label',
+    'sortOrder',
+    'updatedAt',
+    'videoId',
+  ] as const
+  $columns = VideoStageSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare done: boolean
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare label: string
+  @column()
+  declare sortOrder: number
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+  @column()
+  declare videoId: string
+}
+
+export class VideoSchema extends BaseModel {
+  static $columns = [
+    'createdAt',
+    'id',
+    'idea',
+    'ideaId',
+    'preview',
+    'publish',
+    'sortOrder',
+    'title',
+    'transcript',
+    'updatedAt',
+    'userId',
+  ] as const
+  $columns = VideoSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare idea: string
+  @column()
+  declare ideaId: string | null
+  @column()
+  declare preview: string
+  @column()
+  declare publish: string
+  @column()
+  declare sortOrder: number
+  @column()
+  declare title: string
+  @column()
+  declare transcript: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+  @column()
+  declare userId: string
 }

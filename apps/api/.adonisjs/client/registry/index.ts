@@ -42,6 +42,12 @@ const routes = {
     tokens: [{"old":"/billing/portal","type":0,"val":"billing","end":""},{"old":"/billing/portal","type":0,"val":"portal","end":""}],
     types: placeholder as Registry['billing.portal']['types'],
   },
+  'workspace.show': {
+    methods: ["GET","HEAD"],
+    pattern: '/content/workspace',
+    tokens: [{"old":"/content/workspace","type":0,"val":"content","end":""},{"old":"/content/workspace","type":0,"val":"workspace","end":""}],
+    types: placeholder as Registry['workspace.show']['types'],
+  },
   'billing.webhook': {
     methods: ["POST"],
     pattern: '/billing/webhook',

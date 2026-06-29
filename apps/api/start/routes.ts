@@ -3,7 +3,7 @@ import { middleware } from '#start/kernel'
 import { controllers } from '#generated/controllers'
 import { defineRouteGroup } from '#app/core/utils/index'
 
-const { identity, core, billing } = controllers
+const { identity, core, billing, content } = controllers
 
 defineRouteGroup(() => {
   router.post('register', [identity.Auth, 'register'])
@@ -18,6 +18,10 @@ defineRouteGroup(() => {
 defineRouteGroup('billing', () => {
   router.post('checkout', [billing.Billing, 'checkout'])
   router.post('portal', [billing.Billing, 'portal'])
+}).use(middleware.auth())
+
+defineRouteGroup('content', () => {
+  router.get('workspace', [content.Workspace, 'show'])
 }).use(middleware.auth())
 
 router.post('billing/webhook', [billing.Billing, 'webhook'])

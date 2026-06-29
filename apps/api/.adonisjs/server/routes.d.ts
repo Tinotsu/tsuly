@@ -10,6 +10,7 @@ export type ScannedRoutes = {
     'auth.get_me': { paramsTuple?: []; params?: {} }
     'billing.checkout': { paramsTuple?: []; params?: {} }
     'billing.portal': { paramsTuple?: []; params?: {} }
+    'workspace.show': { paramsTuple?: []; params?: {} }
     'billing.webhook': { paramsTuple?: []; params?: {} }
     'auth.is_authenticated': { paramsTuple?: []; params?: {} }
     'health_checks': { paramsTuple?: []; params?: {} }
@@ -24,11 +25,13 @@ export type ScannedRoutes = {
   }
   GET: {
     'auth.get_me': { paramsTuple?: []; params?: {} }
+    'workspace.show': { paramsTuple?: []; params?: {} }
     'auth.is_authenticated': { paramsTuple?: []; params?: {} }
     'health_checks': { paramsTuple?: []; params?: {} }
   }
   HEAD: {
     'auth.get_me': { paramsTuple?: []; params?: {} }
+    'workspace.show': { paramsTuple?: []; params?: {} }
     'auth.is_authenticated': { paramsTuple?: []; params?: {} }
     'health_checks': { paramsTuple?: []; params?: {} }
   }

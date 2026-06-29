@@ -79,6 +79,18 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#app/billing/controllers/billing_controller').default['portal']>>>
     }
   }
+  'workspace.show': {
+    methods: ["GET","HEAD"]
+    pattern: '/content/workspace'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['show']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['show']>>>
+    }
+  }
   'billing.webhook': {
     methods: ["POST"]
     pattern: '/billing/webhook'
