@@ -60,6 +60,24 @@ const routes = {
     tokens: [{"old":"/content/ideas/:id","type":0,"val":"content","end":""},{"old":"/content/ideas/:id","type":0,"val":"ideas","end":""},{"old":"/content/ideas/:id","type":1,"val":"id","end":""}],
     types: placeholder as Registry['workspace.update_idea']['types'],
   },
+  'workspace.generate_script_from_idea': {
+    methods: ["POST"],
+    pattern: '/content/ideas/:id/script',
+    tokens: [{"old":"/content/ideas/:id/script","type":0,"val":"content","end":""},{"old":"/content/ideas/:id/script","type":0,"val":"ideas","end":""},{"old":"/content/ideas/:id/script","type":1,"val":"id","end":""},{"old":"/content/ideas/:id/script","type":0,"val":"script","end":""}],
+    types: placeholder as Registry['workspace.generate_script_from_idea']['types'],
+  },
+  'workspace.update_video_script': {
+    methods: ["PATCH"],
+    pattern: '/content/videos/:id/script',
+    tokens: [{"old":"/content/videos/:id/script","type":0,"val":"content","end":""},{"old":"/content/videos/:id/script","type":0,"val":"videos","end":""},{"old":"/content/videos/:id/script","type":1,"val":"id","end":""},{"old":"/content/videos/:id/script","type":0,"val":"script","end":""}],
+    types: placeholder as Registry['workspace.update_video_script']['types'],
+  },
+  'workspace.chat_video_script': {
+    methods: ["POST"],
+    pattern: '/content/videos/:id/script/chat',
+    tokens: [{"old":"/content/videos/:id/script/chat","type":0,"val":"content","end":""},{"old":"/content/videos/:id/script/chat","type":0,"val":"videos","end":""},{"old":"/content/videos/:id/script/chat","type":1,"val":"id","end":""},{"old":"/content/videos/:id/script/chat","type":0,"val":"script","end":""},{"old":"/content/videos/:id/script/chat","type":0,"val":"chat","end":""}],
+    types: placeholder as Registry['workspace.chat_video_script']['types'],
+  },
   'workspace.update_brand_brain_field': {
     methods: ["PATCH"],
     pattern: '/content/brand-brain-fields/:id',

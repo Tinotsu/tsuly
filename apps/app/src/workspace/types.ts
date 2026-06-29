@@ -12,6 +12,14 @@ export type Workspace = {
     title: string
     idea: string
     transcript: string
+    script: {
+      hook: string
+      spokenScript: string
+      shotList: string
+      onScreenText: string
+      assetsNeeded: string
+      recordingNotes: string
+    }
     recordings: string[]
     editing: Array<{ label: string; done: boolean }>
     preview: string

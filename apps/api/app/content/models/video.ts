@@ -15,6 +15,12 @@ export default class Video extends compose(BaseModel, WithTimestamps, WithPrimar
   @column() declare title: string
   @column() declare idea: string
   @column() declare transcript: string
+  @column() declare scriptHook: string
+  @column() declare scriptSpoken: string
+  @column() declare scriptShotList: string
+  @column() declare scriptOnScreenText: string
+  @column() declare scriptAssetsNeeded: string
+  @column() declare scriptRecordingNotes: string
   @column() declare preview: string
   @column() declare publish: string
   @column() declare sortOrder: number

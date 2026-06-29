@@ -24,6 +24,9 @@ defineRouteGroup('content', () => {
   router.get('workspace', [content.Workspace, 'show'])
   router.post('ideas', [content.Workspace, 'createIdea'])
   router.patch('ideas/:id', [content.Workspace, 'updateIdea'])
+  router.post('ideas/:id/script', [content.Workspace, 'generateScriptFromIdea'])
+  router.patch('videos/:id/script', [content.Workspace, 'updateVideoScript'])
+  router.post('videos/:id/script/chat', [content.Workspace, 'chatVideoScript'])
   router.patch('brand-brain-fields/:id', [content.Workspace, 'updateBrandBrainField'])
   router.post('brand-brain-sections/:sectionId/fields', [
     content.Workspace,

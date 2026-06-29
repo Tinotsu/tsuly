@@ -1,6 +1,7 @@
-import { Check, ChevronDown, Clapperboard, Mic2, Plus, Search, Send } from 'lucide-react'
+import { Link } from '@tanstack/react-router'
+import { Check, ChevronDown, Clapperboard, FileText, Mic2, Plus, Search, Send } from 'lucide-react'
 
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 
@@ -44,25 +45,37 @@ export function VideosView({
 
         <div className="divide-y">
           {videos.map(video => (
-            <button
+            <div
               key={video.id}
-              type="button"
-              onClick={() => onSelectVideo(video.id)}
               className={cn(
-                'flex w-full flex-col gap-3 px-4 py-4 text-left transition hover:bg-muted/50',
+                'flex items-start gap-3 px-4 py-4 transition hover:bg-muted/50',
                 selectedVideo.id === video.id && 'bg-muted/60',
               )}
             >
-              <span className="flex items-center gap-2 font-semibold">
-                <Clapperboard className="size-4 text-sky-700" />
-                {video.title}
-              </span>
-              <span className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
-                {video.stages.map(stage => (
-                  <VideoStage key={stage.label} done={stage.done} label={stage.label} />
-                ))}
-              </span>
-            </button>
+              <button
+                type="button"
+                onClick={() => onSelectVideo(video.id)}
+                className="flex min-w-0 flex-1 flex-col gap-3 text-left"
+              >
+                <span className="flex items-center gap-2 font-semibold">
+                  <Clapperboard className="size-4 text-sky-700" />
+                  {video.title}
+                </span>
+                <span className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
+                  {video.stages.map(stage => (
+                    <VideoStage key={stage.label} done={stage.done} label={stage.label} />
+                  ))}
+                </span>
+              </button>
+              <Link
+                to="/videos/$videoId/script"
+                params={{ videoId: video.id }}
+                className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'self-start')}
+              >
+                <FileText />
+                Script
+              </Link>
+            </div>
           ))}
         </div>
       </section>
@@ -119,6 +132,14 @@ function VideoDetail({ video }: { video: Video }) {
       </div>
 
       <div className="flex flex-wrap gap-2 border-t p-4">
+        <Link
+          to="/videos/$videoId/script"
+          params={{ videoId: video.id }}
+          className={buttonVariants({ variant: 'outline' })}
+        >
+          <FileText />
+          Script
+        </Link>
         <Button type="button" variant="outline">
           <Mic2 />
           Record

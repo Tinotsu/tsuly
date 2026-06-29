@@ -42,4 +42,14 @@ export default await Env.create(new URL('../', import.meta.url), {
   STRIPE_SECRET_KEY: Env.schema.string.optional(),
   STRIPE_WEBHOOK_SECRET: Env.schema.string.optional(),
   STRIPE_PRICE_PRO: Env.schema.string.optional(),
+
+  /*
+  |----------------------------------------------------------
+  | Script generation
+  |----------------------------------------------------------
+  */
+  OPENAI_API_KEY: Env.schema.string.optional(),
+  OPENAI_BASE_URL: Env.schema.string.optional(),
+  OPENAI_MODEL: Env.schema.string.optional(),
+  DEEPSEEK_API_KEY: Env.schema.string.optional(),
 })

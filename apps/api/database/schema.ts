@@ -238,6 +238,12 @@ export class VideoSchema extends BaseModel {
     'ideaId',
     'preview',
     'publish',
+    'scriptAssetsNeeded',
+    'scriptHook',
+    'scriptOnScreenText',
+    'scriptRecordingNotes',
+    'scriptShotList',
+    'scriptSpoken',
     'sortOrder',
     'title',
     'transcript',
@@ -257,6 +263,18 @@ export class VideoSchema extends BaseModel {
   declare preview: string
   @column()
   declare publish: string
+  @column()
+  declare scriptAssetsNeeded: string
+  @column()
+  declare scriptHook: string
+  @column()
+  declare scriptOnScreenText: string
+  @column()
+  declare scriptRecordingNotes: string
+  @column()
+  declare scriptShotList: string
+  @column()
+  declare scriptSpoken: string
   @column()
   declare sortOrder: number
   @column()

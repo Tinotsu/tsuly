@@ -4,6 +4,9 @@ import BrandBrainField from '../models/brand_brain_field.ts'
 import BrandBrainSection from '../models/brand_brain_section.ts'
 import Idea from '../models/idea.ts'
 import Video from '../models/video.ts'
+import ScriptGeneratorService, { type VideoScript } from './script_generator_service.ts'
+
+const scriptGenerator = new ScriptGeneratorService()
 
 const defaultWorkspace = {
   ideas: [
@@ -75,6 +78,16 @@ const defaultWorkspace = {
       idea: 'Turn daily posting into a simple trust-building habit for founder-led teams.',
       transcript:
         'Posting daily is not about chasing the algorithm. It is about giving future customers enough proof to understand how you think before they ever book a call.',
+      scriptHook:
+        'Your next customer may only trust you after the fifth post, not the first pitch.',
+      scriptSpoken:
+        'Posting daily is not about chasing the algorithm.\n\nIt is about giving future customers enough proof to understand how you think before they ever book a call.',
+      scriptShotList:
+        'Scene 1\nType: Talking head\nDuration: 3s\n\nScene 2\nType: B-roll\nShow: Founder recording a quick answer\n\nScene 3\nType: Talking head',
+      scriptOnScreenText: 'Daily posts build trust\nProof beats polish',
+      scriptAssetsNeeded: '- Phone camera setup\n- Example customer question\n- Posting dashboard',
+      scriptRecordingNotes:
+        'Tone: calm and direct\nPause after the hook\nKeep the example specific',
       recordings: ['Take #1 - strongest opening', 'Take #2 - cleaner ending'],
       editing: [
         { label: 'Captions', done: true },
@@ -96,6 +109,15 @@ const defaultWorkspace = {
       idea: 'Explain why judgment and taste become more valuable as AI makes drafts cheaper.',
       transcript:
         'AI will not replace creators who know what to keep, what to cut, and what their audience actually believes. The draft is cheap. The judgment is not.',
+      scriptHook: 'AI is raising the floor. Taste is still the ceiling.',
+      scriptSpoken:
+        'AI will not replace creators who know what to keep, what to cut, and what their audience actually believes.\n\nThe draft is cheap. The judgment is not.',
+      scriptShotList:
+        'Scene 1\nType: Talking head\nDuration: 3s\n\nScene 2\nType: Screen recording\nShow: AI draft with edits\n\nScene 3\nType: Talking head',
+      scriptOnScreenText: 'The draft is cheap\nJudgment is not',
+      scriptAssetsNeeded: '- AI draft screen recording\n- Edited script example',
+      scriptRecordingNotes:
+        'Tone: opinionated\nPoint at the edit example\nSlow down on the last sentence',
       recordings: ['Take #1 - calmer delivery', 'Take #2 - better CTA'],
       editing: [
         { label: 'Captions', done: true },
@@ -117,6 +139,14 @@ const defaultWorkspace = {
       idea: 'Give founders a practical line between useful transparency and noisy updates.',
       transcript:
         'Build in public works when the lesson is useful without private context. Share the decision, the tradeoff, and the result. Keep the diary out of it.',
+      scriptHook: 'Build in public is not a diary.',
+      scriptSpoken:
+        'Build in public works when the lesson is useful without private context.\n\nShare the decision, the tradeoff, and the result.\n\nKeep the diary out of it.',
+      scriptShotList:
+        'Scene 1\nType: Talking head\nDuration: 3s\n\nScene 2\nType: B-roll\nShow: Product update draft\n\nScene 3\nType: Talking head',
+      scriptOnScreenText: 'Share the lesson\nSkip the diary',
+      scriptAssetsNeeded: '- Product update draft\n- Example tradeoff note',
+      scriptRecordingNotes: 'Tone: practical\nPause before the last line\nKeep delivery concise',
       recordings: [],
       editing: [
         { label: 'Captions', done: false },
@@ -249,17 +279,7 @@ export default class WorkspaceService {
 
     return {
       ideas: ideas.map(idea => this.serializeIdea(idea)),
-      videos: videos.map(video => ({
-        id: video.id,
-        title: video.title,
-        idea: video.idea,
-        transcript: video.transcript,
-        recordings: video.recordings.map(recording => recording.label),
-        editing: video.editing.map(task => ({ label: task.label, done: task.done })),
-        preview: video.preview,
-        publish: video.publish,
-        stages: video.stages.map(stage => ({ label: stage.label, done: stage.done })),
-      })),
+      videos: videos.map(video => this.serializeVideo(video)),
       brandBrain: brandBrain.map(section => ({
         id: section.id,
         key: section.key,
@@ -328,10 +348,113 @@ export default class WorkspaceService {
     return this.serializeIdea(idea)
   }
 
+  async generateScriptFromIdea(userId: string, ideaId: string) {
+    const idea = await Idea.query()
+      .where('user_id', userId)
+      .where('id', ideaId)
+      .preload('keyPoints', query => query.orderBy('sort_order'))
+      .firstOrFail()
+
+    const brandBrain = await BrandBrainSection.query()
+      .where('user_id', userId)
+      .orderBy('sort_order')
+      .preload('fields', query => query.orderBy('sort_order'))
+
+    const script = await scriptGenerator.generate({
+      title: idea.title,
+      idea: idea.problem || idea.title,
+      problem: idea.problem,
+      hook: idea.hook,
+      keyPoints: idea.keyPoints.map(keyPoint => keyPoint.body),
+      cta: idea.cta,
+      brandContext: brandBrain
+        .map(section =>
+          [
+            `${section.title}: ${section.summary}`,
+            section.fields.map(field => `${field.label}: ${field.value}`).join('\n'),
+          ].join('\n'),
+        )
+        .join('\n\n'),
+    })
+
+    let video = await Video.query().where('user_id', userId).where('idea_id', idea.id).first()
+
+    if (!video) {
+      const lastVideo = await Video.query()
+        .where('user_id', userId)
+        .orderBy('sort_order', 'desc')
+        .first()
+
+      video = await Video.create({
+        userId,
+        ideaId: idea.id,
+        title: idea.title,
+        idea: idea.problem || idea.title,
+        transcript: script.spokenScript,
+        preview: 'No cut yet',
+        publish: 'Not scheduled',
+        sortOrder: (lastVideo?.sortOrder ?? -1) + 1,
+      })
+
+      await video.related('stages').createMany([
+        { label: 'Script', done: true, sortOrder: 0 },
+        { label: 'Record', done: false, sortOrder: 1 },
+        { label: 'Edit', done: false, sortOrder: 2 },
+        { label: 'Publish', done: false, sortOrder: 3 },
+      ])
+      await video.related('editing').createMany([
+        { label: 'Captions', done: false, sortOrder: 0 },
+        { label: 'Smart cuts', done: false, sortOrder: 1 },
+        { label: 'Silence removal', done: false, sortOrder: 2 },
+      ])
+    }
+
+    video.title = idea.title
+    video.idea = idea.problem || idea.title
+    video.transcript = script.spokenScript
+    this.applyScript(video, script)
+    await video.save()
+    await video.related('stages').query().where('label', 'Script').update({ done: true })
+
+    return this.serializeVideo(await this.getVideo(userId, video.id))
+  }
+
+  async updateVideoScript(
+    userId: string,
+    videoId: string,
+    payload: Partial<Pick<VideoScript, 'hook' | 'spokenScript' | 'onScreenText'>>,
+  ) {
+    const video = await this.getVideo(userId, videoId)
+    const revision = await scriptGenerator.revise({
+      script: { ...this.scriptFromVideo(video), ...payload },
+      editedFields: payload,
+    })
+
+    this.applyScript(video, revision)
+    video.transcript = revision.spokenScript
+    await video.save()
+
+    return { video: this.serializeVideo(video), summary: revision.summary }
+  }
+
+  async chatVideoScript(userId: string, videoId: string, message: string) {
+    const video = await this.getVideo(userId, videoId)
+    const revision = await scriptGenerator.revise({
+      script: this.scriptFromVideo(video),
+      message,
+    })
+
+    this.applyScript(video, revision)
+    video.transcript = revision.spokenScript
+    await video.save()
+
+    return { video: this.serializeVideo(video), summary: revision.summary }
+  }
+
   async updateBrandBrainField(
     userId: string,
     fieldId: string,
-    payload: { label?: string; value: string },
+    payload: { label?: string | null; value: string },
   ) {
     const section = await BrandBrainSection.query()
       .where('user_id', userId)
@@ -340,7 +463,7 @@ export default class WorkspaceService {
       .firstOrFail()
 
     const field = section.fields[0]
-    if (section.key === 'context' && payload.label !== undefined) {
+    if (section.key === 'context' && payload.label !== undefined && payload.label !== null) {
       field.label = payload.label
     }
     field.value = payload.value
@@ -388,6 +511,58 @@ export default class WorkspaceService {
     }
   }
 
+  private serializeVideo(video: Video) {
+    return {
+      id: video.id,
+      title: video.title,
+      idea: video.idea,
+      transcript: video.transcript,
+      script: {
+        hook: video.scriptHook,
+        spokenScript: video.scriptSpoken,
+        shotList: video.scriptShotList,
+        onScreenText: video.scriptOnScreenText,
+        assetsNeeded: video.scriptAssetsNeeded,
+        recordingNotes: video.scriptRecordingNotes,
+      },
+      recordings: video.recordings.map(recording => recording.label),
+      editing: video.editing.map(task => ({ label: task.label, done: task.done })),
+      preview: video.preview,
+      publish: video.publish,
+      stages: video.stages.map(stage => ({ label: stage.label, done: stage.done })),
+    }
+  }
+
+  private scriptFromVideo(video: Video) {
+    return {
+      hook: video.scriptHook,
+      spokenScript: video.scriptSpoken,
+      shotList: video.scriptShotList,
+      onScreenText: video.scriptOnScreenText,
+      assetsNeeded: video.scriptAssetsNeeded,
+      recordingNotes: video.scriptRecordingNotes,
+    }
+  }
+
+  private applyScript(video: Video, script: VideoScript) {
+    video.scriptHook = script.hook
+    video.scriptSpoken = script.spokenScript
+    video.scriptShotList = script.shotList
+    video.scriptOnScreenText = script.onScreenText
+    video.scriptAssetsNeeded = script.assetsNeeded
+    video.scriptRecordingNotes = script.recordingNotes
+  }
+
+  private async getVideo(userId: string, videoId: string) {
+    return await Video.query()
+      .where('user_id', userId)
+      .where('id', videoId)
+      .preload('stages', query => query.orderBy('sort_order'))
+      .preload('recordings', query => query.orderBy('sort_order'))
+      .preload('editing', query => query.orderBy('sort_order'))
+      .firstOrFail()
+  }
+
   private async createDefaultWorkspace(userId: string) {
     await db.transaction(async trx => {
       const ideas = new Map<string, Idea>()
@@ -426,6 +601,12 @@ export default class WorkspaceService {
             title: video.title,
             idea: video.idea,
             transcript: video.transcript,
+            scriptHook: video.scriptHook,
+            scriptSpoken: video.scriptSpoken,
+            scriptShotList: video.scriptShotList,
+            scriptOnScreenText: video.scriptOnScreenText,
+            scriptAssetsNeeded: video.scriptAssetsNeeded,
+            scriptRecordingNotes: video.scriptRecordingNotes,
             preview: video.preview,
             publish: video.publish,
             sortOrder: index,

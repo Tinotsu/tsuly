@@ -115,6 +115,42 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['updateIdea']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
   }
+  'workspace.generate_script_from_idea': {
+    methods: ["POST"]
+    pattern: '/content/ideas/:id/script'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['generateScriptFromIdea']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['generateScriptFromIdea']>>>
+    }
+  }
+  'workspace.update_video_script': {
+    methods: ["PATCH"]
+    pattern: '/content/videos/:id/script'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#app/content/validators/workspace').updateVideoScriptValidator)>>
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#app/content/validators/workspace').updateVideoScriptValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['updateVideoScript']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['updateVideoScript']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'workspace.chat_video_script': {
+    methods: ["POST"]
+    pattern: '/content/videos/:id/script/chat'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#app/content/validators/workspace').chatVideoScriptValidator)>>
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#app/content/validators/workspace').chatVideoScriptValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['chatVideoScript']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['chatVideoScript']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
   'workspace.update_brand_brain_field': {
     methods: ["PATCH"]
     pattern: '/content/brand-brain-fields/:id'

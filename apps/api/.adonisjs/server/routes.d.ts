@@ -13,6 +13,9 @@ export type ScannedRoutes = {
     'workspace.show': { paramsTuple?: []; params?: {} }
     'workspace.create_idea': { paramsTuple?: []; params?: {} }
     'workspace.update_idea': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'workspace.generate_script_from_idea': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'workspace.update_video_script': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'workspace.chat_video_script': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'workspace.update_brand_brain_field': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'workspace.create_brand_brain_field': { paramsTuple: [ParamValue]; params: {'sectionId': ParamValue} }
     'billing.webhook': { paramsTuple?: []; params?: {} }
@@ -26,6 +29,8 @@ export type ScannedRoutes = {
     'billing.checkout': { paramsTuple?: []; params?: {} }
     'billing.portal': { paramsTuple?: []; params?: {} }
     'workspace.create_idea': { paramsTuple?: []; params?: {} }
+    'workspace.generate_script_from_idea': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'workspace.chat_video_script': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'workspace.create_brand_brain_field': { paramsTuple: [ParamValue]; params: {'sectionId': ParamValue} }
     'billing.webhook': { paramsTuple?: []; params?: {} }
   }
@@ -43,6 +48,7 @@ export type ScannedRoutes = {
   }
   PATCH: {
     'workspace.update_idea': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'workspace.update_video_script': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'workspace.update_brand_brain_field': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
 }

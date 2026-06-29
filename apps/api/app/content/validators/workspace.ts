@@ -57,3 +57,17 @@ export const updateIdeaValidator = vine.compile(
     status: vine.string().optional(),
   }),
 )
+
+export const updateVideoScriptValidator = vine.compile(
+  vine.object({
+    hook: cardText().optional(),
+    spokenScript: cardText().optional(),
+    onScreenText: cardText().optional(),
+  }),
+)
+
+export const chatVideoScriptValidator = vine.compile(
+  vine.object({
+    message: cardText(),
+  }),
+)

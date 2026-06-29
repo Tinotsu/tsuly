@@ -1,10 +1,12 @@
 import { useMutation } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
 import { ArrowRight, Plus, Search, Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { queryClient } from '@/lib/query_client'
 import { query } from '@/lib/tuyau'
 import { cn } from '@/lib/utils'
 
@@ -24,6 +26,7 @@ export function IdeasView({
   onSelectIdea: (id: Idea['id']) => void
 }) {
   const [draftIdeas, setDraftIdeas] = useState(ideas)
+  const navigate = useNavigate()
   const draftSelectedIdea =
     draftIdeas.find(idea => idea.id === selectedIdea.id) ?? draftIdeas[0] ?? selectedIdea
   const saveIdea = useMutation(query.workspace.updateIdea.mutationOptions())
@@ -32,6 +35,16 @@ export function IdeasView({
       onSuccess: idea => {
         setDraftIdeas(current => [...current, idea])
         onSelectIdea(idea.id)
+      },
+    }),
+  )
+  const generateScript = useMutation(
+    query.workspace.generateScriptFromIdea.mutationOptions({
+      onSuccess: async video => {
+        await queryClient.invalidateQueries({
+          queryKey: query.workspace.show.queryOptions({}).queryKey,
+        })
+        await navigate({ to: '/videos/$videoId/script', params: { videoId: video.id } })
       },
     }),
   )
@@ -109,6 +122,8 @@ export function IdeasView({
 
       <IdeaDetail
         idea={draftSelectedIdea}
+        isGenerating={generateScript.isPending}
+        onGenerate={() => generateScript.mutate({ params: { id: draftSelectedIdea.id } })}
         onUpdate={values => updateDraftIdea(draftSelectedIdea.id, values)}
         onSave={saveDraftIdea}
       />
@@ -118,10 +133,14 @@ export function IdeasView({
 
 function IdeaDetail({
   idea,
+  isGenerating,
+  onGenerate,
   onUpdate,
   onSave,
 }: {
   idea: Idea
+  isGenerating: boolean
+  onGenerate: () => void
   onUpdate: (values: Partial<Idea>) => void
   onSave: (idea: Idea) => void
 }) {
@@ -175,9 +194,9 @@ function IdeaDetail({
       </div>
 
       <div className="flex flex-wrap gap-2 border-t p-4">
-        <Button type="button">
+        <Button type="button" disabled={isGenerating} onClick={onGenerate}>
           <Sparkles />
-          Generate script
+          {isGenerating ? 'Generating...' : 'Generate script'}
         </Button>
         <Button type="button" variant="outline">
           <ArrowRight />
