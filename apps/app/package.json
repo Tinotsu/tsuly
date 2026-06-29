@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@acme/api": "workspace:*",
+    "@base-ui/react": "^1.6.0",
+    "@fontsource-variable/geist": "^5.2.9",
     "@tailwindcss/vite": "^4.2.2",
     "@tanstack/react-devtools": "^0.10.0",
     "@tanstack/react-query": "^5.91.0",
@@ -18,10 +20,16 @@
     "@tanstack/router-plugin": "^1.166.14",
     "@tuyau/core": "catalog:",
     "@tuyau/react-query": "^1.1.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.22.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "shadcn": "^4.12.0",
+    "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.2.2",
-    "ts-pattern": "catalog:"
+    "ts-pattern": "catalog:",
+    "tw-animate-css": "^1.4.0"
   },
   "devDependencies": {
     "@tanstack/devtools-vite": "^0.6.0",
@@ -29,7 +37,6 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
-    "daisyui": "^5.5.20",
     "vite": "^8.0.0"
   }
 }

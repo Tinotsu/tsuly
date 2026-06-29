@@ -1,9 +1,18 @@
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useQuery, useMutation } from '@tanstack/react-query'
+import { MenuIcon } from 'lucide-react'
 
 import { query } from '@/lib/tuyau'
 import { queryClient } from '@/lib/query_client'
 import { getMeQueryOptions } from '@/hooks/auth'
+import { Button, buttonVariants } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { cn } from '@/lib/utils'
 
 export default function Header() {
   const navigate = useNavigate()
@@ -19,86 +28,64 @@ export default function Header() {
   )
 
   return (
-    <div className="navbar bg-base-100 border-b border-base-300 px-4 sm:px-6 lg:px-8">
-      <div className="navbar-start">
-        <Link to="/" className="btn btn-ghost text-xl font-semibold">
-          StarterKit
-        </Link>
-      </div>
+    <header className="flex h-16 items-center justify-between border-b bg-background px-4 sm:px-6 lg:px-8">
+      <Link to="/" className={cn(buttonVariants({ variant: 'ghost' }), 'text-xl font-semibold')}>
+        StarterKit
+      </Link>
 
-      <div className="navbar-end hidden md:flex gap-1">
-        <Link to="/pricing" className="btn btn-ghost">
+      <nav className="hidden items-center gap-1 md:flex">
+        <Link to="/pricing" className={buttonVariants({ variant: 'ghost' })}>
           Pricing
         </Link>
         {user ? (
           <>
-            <Link to="/dashboard" className="btn btn-ghost">
+            <Link to="/dashboard" className={buttonVariants({ variant: 'ghost' })}>
               Dashboard
             </Link>
-            <button type="button" className="btn btn-ghost" onClick={() => logout.mutate({})}>
+            <Button type="button" variant="ghost" onClick={() => logout.mutate({})}>
               Sign out
-            </button>
+            </Button>
           </>
         ) : (
           <>
-            <Link to="/auth/login" className="btn btn-ghost">
+            <Link to="/auth/login" className={buttonVariants({ variant: 'ghost' })}>
               Sign in
             </Link>
-            <Link to="/auth/register" className="btn btn-primary">
+            <Link to="/auth/register" className={buttonVariants()}>
               Get started
             </Link>
           </>
         )}
-      </div>
+      </nav>
 
-      <div className="navbar-end md:hidden">
-        <div className="dropdown dropdown-end">
-          <div tabIndex={0} role="button" className="btn btn-ghost btn-square" aria-label="Menu">
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 6h16M4 12h16M4 18h16"
-              />
-            </svg>
-          </div>
-          <ul
-            tabIndex={0}
-            className="menu menu-sm dropdown-content bg-base-100 rounded-box z-10 mt-3 w-52 p-2 shadow"
-          >
+      <div className="md:hidden">
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button variant="ghost" size="icon" aria-label="Menu">
+                <MenuIcon />
+              </Button>
+            }
+          />
+          <DropdownMenuContent align="end" className="w-52">
             {user ? (
               <>
-                <li>
-                  <Link to="/pricing">Pricing</Link>
-                </li>
-                <li>
-                  <Link to="/dashboard">Dashboard</Link>
-                </li>
-                <li>
-                  <button type="button" onClick={() => logout.mutate({})}>
-                    Sign out
-                  </button>
-                </li>
+                <DropdownMenuItem render={<Link to="/pricing" />}>Pricing</DropdownMenuItem>
+                <DropdownMenuItem render={<Link to="/dashboard" />}>Dashboard</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => logout.mutate({})}>Sign out</DropdownMenuItem>
               </>
             ) : (
               <>
-                <li>
-                  <Link to="/pricing">Pricing</Link>
-                </li>
-                <li>
-                  <Link to="/auth/login">Sign in</Link>
-                </li>
-                <li>
-                  <Link to="/auth/register" className="btn btn-primary btn-sm">
-                    Get started
-                  </Link>
-                </li>
+                <DropdownMenuItem render={<Link to="/pricing" />}>Pricing</DropdownMenuItem>
+                <DropdownMenuItem render={<Link to="/auth/login" />}>Sign in</DropdownMenuItem>
+                <DropdownMenuItem render={<Link to="/auth/register" />}>
+                  Get started
+                </DropdownMenuItem>
               </>
             )}
-          </ul>
-        </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
-    </div>
+    </header>
   )
 }

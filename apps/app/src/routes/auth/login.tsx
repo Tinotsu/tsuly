@@ -5,6 +5,18 @@ import { useMutation } from '@tanstack/react-query'
 import { query } from '@/lib/tuyau'
 import { queryClient } from '@/lib/query_client'
 import { redirectToDashboardIfAuthenticated } from '@/hooks/auth'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 export const Route = createFileRoute('/auth/login')({
   component: RouteComponent,
@@ -52,66 +64,62 @@ function RouteComponent() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] px-4">
-      <div className="card bg-base-100 shadow-xl w-full max-w-lg">
-        <div className="card-body">
-          <h2 className="card-title">Login to your account</h2>
-          <p className="text-base-content/70">Enter your email below to login to your account</p>
-
-          <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4">
+      <Card className="w-full max-w-lg shadow-lg">
+        <CardHeader>
+          <CardTitle>Login to your account</CardTitle>
+          <CardDescription>Enter your email below to login to your account</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
             {errors.general && (
-              <div role="alert" className="alert alert-error">
-                <span>{errors.general}</span>
-              </div>
+              <Alert variant="destructive">
+                <AlertDescription>{errors.general}</AlertDescription>
+              </Alert>
             )}
 
-            <label className="form-control w-full">
-              <div className="label">
-                <span className="label-text">Email</span>
-              </div>
-              <input
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
                 id="email"
                 type="email"
                 placeholder="m@example.com"
-                className="input input-bordered w-full"
                 value={formData.email}
                 onChange={handleChange('email')}
                 required
               />
-            </label>
+            </div>
 
-            <label className="form-control w-full">
-              <div className="label">
-                <span className="label-text">Password</span>
-                <a href="#" className="label-text-alt link link-hover">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                <a href="#" className="text-sm text-primary hover:underline">
                   Forgot your password?
                 </a>
               </div>
-              <input
+              <Input
                 id="password"
                 type="password"
-                className="input input-bordered w-full"
                 value={formData.password}
                 onChange={handleChange('password')}
                 required
               />
-            </label>
-
-            <div className="form-control mt-2">
-              <button type="submit" className="btn btn-primary" disabled={login.isPending}>
-                {login.isPending ? 'Logging in...' : 'Login'}
-              </button>
             </div>
 
-            <p className="text-center text-sm opacity-70">
-              Don&apos;t have an account?{' '}
-              <Link to="/auth/register" className="link link-primary">
-                Sign up
-              </Link>
-            </p>
+            <Button type="submit" className="w-full" disabled={login.isPending}>
+              {login.isPending ? 'Logging in...' : 'Login'}
+            </Button>
           </form>
-        </div>
-      </div>
+        </CardContent>
+        <CardFooter className="justify-center border-0 bg-transparent">
+          <p className="text-center text-sm text-muted-foreground">
+            Don&apos;t have an account?{' '}
+            <Link to="/auth/register" className="text-primary hover:underline">
+              Sign up
+            </Link>
+          </p>
+        </CardFooter>
+      </Card>
     </div>
   )
 }
