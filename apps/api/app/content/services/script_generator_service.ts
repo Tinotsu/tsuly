@@ -48,6 +48,7 @@ export default class ScriptGeneratorService {
         role: 'user',
         content: [
           'Generate a short-form video script from this idea.',
+          'Every JSON value must be a string. For lists, use one newline-separated string, not an array.',
           'Hook must be the first 2-3 seconds.',
           'spokenScript is exactly what the creator reads.',
           'shotList is optional visuals/B-roll, but include useful scenes when relevant.',
@@ -81,6 +82,7 @@ export default class ScriptGeneratorService {
           role: 'user',
           content: [
             'Revise this script. Keep unchanged sections unless they need to change for consistency.',
+            'Every JSON value must be a string. For lists, use one newline-separated string, not an array.',
             input.message ? `Creator request: ${input.message}` : '',
             input.editedFields
               ? `Creator edited these fields:\n${JSON.stringify(input.editedFields, null, 2)}`
@@ -139,28 +141,34 @@ export default class ScriptGeneratorService {
         .trim(),
     )
     const script = {
-      hook: parsed.hook,
-      spokenScript: parsed.spokenScript,
-      shotList: parsed.shotList,
-      onScreenText: parsed.onScreenText,
-      assetsNeeded: parsed.assetsNeeded,
-      recordingNotes: parsed.recordingNotes,
+      hook: this.scriptSectionToText(parsed.hook),
+      spokenScript: this.scriptSectionToText(parsed.spokenScript),
+      shotList: this.scriptSectionToText(parsed.shotList),
+      onScreenText: this.scriptSectionToText(parsed.onScreenText),
+      assetsNeeded: this.scriptSectionToText(parsed.assetsNeeded),
+      recordingNotes: this.scriptSectionToText(parsed.recordingNotes),
     }
 
     for (const value of Object.values(script)) {
-      if (typeof value !== 'string') {
+      if (!value) {
         throw new Error('Script generation returned an invalid script')
       }
     }
 
     if (includeSummary) {
-      if (typeof parsed.summary !== 'string') {
-        throw new Error('Script revision returned no summary')
-      }
-      return { ...script, summary: parsed.summary }
+      const summary = this.scriptSectionToText(parsed.summary) || 'Updated the script.'
+      return { ...script, summary }
     }
 
     return script
+  }
+
+  private scriptSectionToText(value: unknown) {
+    if (typeof value === 'string') return value
+    if (Array.isArray(value)) {
+      return value.map(item => (typeof item === 'string' ? item : JSON.stringify(item))).join('\n')
+    }
+    return ''
   }
 
   private openAiConfig() {
