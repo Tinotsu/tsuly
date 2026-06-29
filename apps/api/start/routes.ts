@@ -22,6 +22,11 @@ defineRouteGroup('billing', () => {
 
 defineRouteGroup('content', () => {
   router.get('workspace', [content.Workspace, 'show'])
+  router.patch('brand-brain-fields/:id', [content.Workspace, 'updateBrandBrainField'])
+  router.post('brand-brain-sections/:sectionId/fields', [
+    content.Workspace,
+    'createBrandBrainField',
+  ])
 }).use(middleware.auth())
 
 router.post('billing/webhook', [billing.Billing, 'webhook'])

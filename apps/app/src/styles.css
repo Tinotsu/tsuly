@@ -157,7 +157,7 @@
 
 .dark {
   --background:
-    oklch(0.145 0 0);
+  #B2BCB2;
   --foreground:
     oklch(0.985 0 0);
   --card:
@@ -169,7 +169,7 @@
   --popover-foreground:
     oklch(0.985 0 0);
   --primary:
-    oklch(0.922 0 0);
+  #D8B956;
   --primary-foreground:
     oklch(0.205 0 0);
   --secondary:

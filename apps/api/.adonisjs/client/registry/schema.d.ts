@@ -91,6 +91,30 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['show']>>>
     }
   }
+  'workspace.update_brand_brain_field': {
+    methods: ["PATCH"]
+    pattern: '/content/brand-brain-fields/:id'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#app/content/validators/workspace').updateBrandBrainFieldValidator)>>
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#app/content/validators/workspace').updateBrandBrainFieldValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['updateBrandBrainField']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['updateBrandBrainField']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'workspace.create_brand_brain_field': {
+    methods: ["POST"]
+    pattern: '/content/brand-brain-sections/:sectionId/fields'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#app/content/validators/workspace').createBrandBrainFieldValidator)>>
+      paramsTuple: [ParamValue]
+      params: { sectionId: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#app/content/validators/workspace').createBrandBrainFieldValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['createBrandBrainField']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['createBrandBrainField']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
   'billing.webhook': {
     methods: ["POST"]
     pattern: '/billing/webhook'

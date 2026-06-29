@@ -16,6 +16,8 @@ export interface ApiDefinition {
   }
   workspace: {
     show: typeof routes['workspace.show']
+    updateBrandBrainField: typeof routes['workspace.update_brand_brain_field']
+    createBrandBrainField: typeof routes['workspace.create_brand_brain_field']
   }
   healthChecks: typeof routes['health_checks']
 }

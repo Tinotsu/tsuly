@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useSuspenseQuery } from '@tanstack/react-query'
+import { useMutation, useSuspenseQuery } from '@tanstack/react-query'
 import {
   ArrowRight,
   Bot,
@@ -64,7 +64,7 @@ type Workspace = {
     key: string
     title: string
     summary: string
-    fields: Array<{ label: string; value: string }>
+    fields: Array<{ id: string; label: string; value: string }>
   }>
 }
 
@@ -448,18 +448,81 @@ function BrandBrainView({
   selectedSection: BrandSection
   onSelectSection: (id: BrandSection['id']) => void
 }) {
-  const SelectedIcon = brandIcons[selectedSection.key] ?? FileText
+  const [draftSections, setDraftSections] = useState(sections)
+  const draftSelectedSection =
+    draftSections.find(section => section.id === selectedSection.id) ?? draftSections[0]
+  const SelectedIcon = brandIcons[draftSelectedSection.key] ?? FileText
+  const saveField = useMutation(query.workspace.updateBrandBrainField.mutationOptions())
+  const createField = useMutation(
+    query.workspace.createBrandBrainField.mutationOptions({
+      onSuccess: (field, variables) => {
+        setDraftSections(current =>
+          current.map(section =>
+            section.id === variables.params.sectionId
+              ? { ...section, fields: [...section.fields, field] }
+              : section,
+          ),
+        )
+      },
+    }),
+  )
+
+  useEffect(() => setDraftSections(sections), [sections])
+
+  function updateDraftField(
+    sectionId: BrandSection['id'],
+    fieldId: BrandSection['fields'][number]['id'],
+    values: Partial<BrandSection['fields'][number]>,
+  ) {
+    setDraftSections(current =>
+      current.map(section =>
+        section.id === sectionId
+          ? {
+              ...section,
+              fields: section.fields.map(field =>
+                field.id === fieldId ? { ...field, ...values } : field,
+              ),
+            }
+          : section,
+      ),
+    )
+  }
+
+  function saveDraftField(section: BrandSection, field: BrandSection['fields'][number]) {
+    saveField.mutate({
+      params: { id: field.id },
+      body:
+        section.key === 'context'
+          ? { label: field.label, value: field.value }
+          : { value: field.value },
+    })
+  }
+
+  function addExtraContextCard() {
+    createField.mutate({
+      params: { sectionId: draftSelectedSection.id },
+      body: { label: 'New card', value: '' },
+    })
+  }
 
   return (
     <div className="grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
       <section className="rounded-lg border bg-card p-3">
-        <div className="px-1 pb-3">
-          <h2 className="text-lg font-semibold">Brand Brain</h2>
-          <p className="text-sm text-muted-foreground">Context used by generation</p>
+        <div className="flex items-start justify-between gap-3 px-1 pb-3">
+          <div>
+            <h2 className="text-lg font-semibold">Brand Brain</h2>
+            <p className="text-sm text-muted-foreground">Context used by generation</p>
+          </div>
+          {draftSelectedSection.key === 'context' && (
+            <Button type="button" size="sm" onClick={addExtraContextCard}>
+              <Plus />
+              Card
+            </Button>
+          )}
         </div>
 
         <div className="space-y-2">
-          {sections.map(section => {
+          {draftSections.map(section => {
             const Icon = brandIcons[section.key] ?? FileText
 
             return (
@@ -494,15 +557,37 @@ function BrandBrainView({
           </span>
           <div>
             <p className="text-sm font-medium text-muted-foreground">Brand Brain</p>
-            <h2 className="text-xl font-semibold tracking-tight">{selectedSection.title}</h2>
+            <h2 className="text-xl font-semibold tracking-tight">{draftSelectedSection.title}</h2>
           </div>
         </div>
 
         <div className="grid gap-4 p-4 md:grid-cols-2">
-          {selectedSection.fields.map(field => (
-            <div key={field.label} className="rounded-lg border bg-background p-4">
-              <p className="text-sm font-medium text-muted-foreground">{field.label}</p>
-              <p className="mt-2 text-sm leading-6">{field.value}</p>
+          {draftSelectedSection.fields.map(field => (
+            <div key={field.id} className="rounded-lg border bg-background p-4">
+              {draftSelectedSection.key === 'context' ? (
+                <input
+                  value={field.label}
+                  onChange={event =>
+                    updateDraftField(draftSelectedSection.id, field.id, {
+                      label: event.target.value,
+                    })
+                  }
+                  onBlur={() => saveDraftField(draftSelectedSection, field)}
+                  className="w-full bg-transparent text-sm font-medium text-muted-foreground outline-none focus:text-foreground"
+                />
+              ) : (
+                <p className="text-sm font-medium text-muted-foreground">{field.label}</p>
+              )}
+              <textarea
+                value={field.value}
+                onChange={event =>
+                  updateDraftField(draftSelectedSection.id, field.id, {
+                    value: event.target.value,
+                  })
+                }
+                onBlur={() => saveDraftField(draftSelectedSection, field)}
+                className="mt-2 w-full resize-none bg-transparent text-sm font-medium text-muted-foreground outline-none focus:text-foreground"
+              />
             </div>
           ))}
         </div>

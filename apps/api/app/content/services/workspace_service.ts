@@ -1,5 +1,6 @@
 import db from '@adonisjs/lucid/services/db'
 
+import BrandBrainField from '../models/brand_brain_field.ts'
 import BrandBrainSection from '../models/brand_brain_section.ts'
 import Idea from '../models/idea.ts'
 import Video from '../models/video.ts'
@@ -277,9 +278,62 @@ export default class WorkspaceService {
         key: section.key,
         title: section.title,
         summary: section.summary,
-        fields: section.fields.map(field => ({ label: field.label, value: field.value })),
+        fields: section.fields.map(field => ({
+          id: field.id,
+          label: field.label,
+          value: field.value,
+        })),
       })),
     }
+  }
+
+  async updateBrandBrainField(
+    userId: string,
+    fieldId: string,
+    payload: { label?: string; value: string },
+  ) {
+    const section = await BrandBrainSection.query()
+      .where('user_id', userId)
+      .whereHas('fields', query => query.where('id', fieldId))
+      .preload('fields', query => query.where('id', fieldId))
+      .firstOrFail()
+
+    const field = section.fields[0]
+    if (section.key === 'context' && payload.label !== undefined) {
+      field.label = payload.label
+    }
+    field.value = payload.value
+    await field.save()
+
+    return { id: field.id, label: field.label, value: field.value }
+  }
+
+  async createBrandBrainField(
+    userId: string,
+    sectionId: string,
+    payload: { label: string; value: string },
+  ) {
+    const section = await BrandBrainSection.query()
+      .where('user_id', userId)
+      .where('id', sectionId)
+      .firstOrFail()
+
+    if (section.key !== 'context') {
+      throw new Error('Brand Brain cards can only be added to Extra Context')
+    }
+
+    const lastField = await BrandBrainField.query()
+      .where('brand_brain_section_id', section.id)
+      .orderBy('sort_order', 'desc')
+      .first()
+
+    const field = await section.related('fields').create({
+      label: payload.label,
+      value: payload.value,
+      sortOrder: (lastField?.sortOrder ?? -1) + 1,
+    })
+
+    return { id: field.id, label: field.label, value: field.value }
   }
 
   private async createDefaultWorkspace(userId: string) {

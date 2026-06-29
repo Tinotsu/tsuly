@@ -11,6 +11,8 @@ export type ScannedRoutes = {
     'billing.checkout': { paramsTuple?: []; params?: {} }
     'billing.portal': { paramsTuple?: []; params?: {} }
     'workspace.show': { paramsTuple?: []; params?: {} }
+    'workspace.update_brand_brain_field': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'workspace.create_brand_brain_field': { paramsTuple: [ParamValue]; params: {'sectionId': ParamValue} }
     'billing.webhook': { paramsTuple?: []; params?: {} }
     'auth.is_authenticated': { paramsTuple?: []; params?: {} }
     'health_checks': { paramsTuple?: []; params?: {} }
@@ -21,6 +23,7 @@ export type ScannedRoutes = {
     'auth.logout': { paramsTuple?: []; params?: {} }
     'billing.checkout': { paramsTuple?: []; params?: {} }
     'billing.portal': { paramsTuple?: []; params?: {} }
+    'workspace.create_brand_brain_field': { paramsTuple: [ParamValue]; params: {'sectionId': ParamValue} }
     'billing.webhook': { paramsTuple?: []; params?: {} }
   }
   GET: {
@@ -34,6 +37,9 @@ export type ScannedRoutes = {
     'workspace.show': { paramsTuple?: []; params?: {} }
     'auth.is_authenticated': { paramsTuple?: []; params?: {} }
     'health_checks': { paramsTuple?: []; params?: {} }
+  }
+  PATCH: {
+    'workspace.update_brand_brain_field': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
 }
 declare module '@adonisjs/core/types/http' {

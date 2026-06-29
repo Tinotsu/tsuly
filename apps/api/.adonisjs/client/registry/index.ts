@@ -48,6 +48,18 @@ const routes = {
     tokens: [{"old":"/content/workspace","type":0,"val":"content","end":""},{"old":"/content/workspace","type":0,"val":"workspace","end":""}],
     types: placeholder as Registry['workspace.show']['types'],
   },
+  'workspace.update_brand_brain_field': {
+    methods: ["PATCH"],
+    pattern: '/content/brand-brain-fields/:id',
+    tokens: [{"old":"/content/brand-brain-fields/:id","type":0,"val":"content","end":""},{"old":"/content/brand-brain-fields/:id","type":0,"val":"brand-brain-fields","end":""},{"old":"/content/brand-brain-fields/:id","type":1,"val":"id","end":""}],
+    types: placeholder as Registry['workspace.update_brand_brain_field']['types'],
+  },
+  'workspace.create_brand_brain_field': {
+    methods: ["POST"],
+    pattern: '/content/brand-brain-sections/:sectionId/fields',
+    tokens: [{"old":"/content/brand-brain-sections/:sectionId/fields","type":0,"val":"content","end":""},{"old":"/content/brand-brain-sections/:sectionId/fields","type":0,"val":"brand-brain-sections","end":""},{"old":"/content/brand-brain-sections/:sectionId/fields","type":1,"val":"sectionId","end":""},{"old":"/content/brand-brain-sections/:sectionId/fields","type":0,"val":"fields","end":""}],
+    types: placeholder as Registry['workspace.create_brand_brain_field']['types'],
+  },
   'billing.webhook': {
     methods: ["POST"],
     pattern: '/billing/webhook',
