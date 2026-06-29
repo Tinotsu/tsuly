@@ -1,8 +1,25 @@
-# AdonisJS Starter Kit
+# Tsuly
 
-Full-stack, opinionated starter kit that brings together AdonisJS 7 (beta) and React with TanStack Router in a monorepo, designed to quickly bootstrap new projects and experiment with ideas. Shared as-is : some parts reflect my personal workflow and preferences.
+**Build your brand in five minutes a day.**
 
-## What's inside?
+[Tsuly.com](https://tsuly.com) is a SaaS that makes short-form content creation easier. Film yourself reading a transcript, validate the result, and post automatically — without the usual friction of ideation, scripting, filming, and editing.
+
+## How it works
+
+### For creators
+
+1. **Film** — Read a transcript on a built-in teleprompter while you record.
+2. **Validate** — Review the take and approve when you're happy.
+3. **Publish** — Tsuly posts automatically to your connected channels.
+
+### Under the hood
+
+1. **Ideation** — AI asks about your brand, ICP, positioning, and goals to generate content ideas tailored to you.
+2. **Scripting** — Generates a video transcript and tells you exactly what to film.
+3. **Recording** — You film yourself reading the teleprompter and upload the footage.
+4. **Editing** — Automatic captions, smart cuts, and silence removal polish the video before you validate.
+
+## Tech stack
 
 - AdonisJS 7
 - React + TanStack Router & Query
@@ -20,7 +37,7 @@ Full-stack, opinionated starter kit that brings together AdonisJS 7 (beta) and R
 1. Clone the repo:
    ```bash
    git clone <repository-url>
-   cd adonis-starter-kit
+   cd tsuly
    ```
 2. Install dependencies:
    ```bash
@@ -78,7 +95,5 @@ pnpm-workspace.yaml
 - `pnpm format` – format code with Oxformat
 
 ---
-
-Feel free to fork, get inspired, or contribute if you want!
 
 MIT License
