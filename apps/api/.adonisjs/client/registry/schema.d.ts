@@ -163,6 +163,18 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['uploadRecording']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
   }
+  'workspace.delete_recording': {
+    methods: ["DELETE"]
+    pattern: '/content/videos/:videoId/recordings/:recordingId'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue, ParamValue]
+      params: { videoId: ParamValue; recordingId: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['deleteRecording']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['deleteRecording']>>>
+    }
+  }
   'workspace.update_brand_brain_field': {
     methods: ["PATCH"]
     pattern: '/content/brand-brain-fields/:id'

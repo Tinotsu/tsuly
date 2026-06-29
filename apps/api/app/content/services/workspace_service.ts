@@ -507,6 +507,30 @@ export default class WorkspaceService {
     }
   }
 
+  async deleteVideoRecording(userId: string, videoId: string, recordingId: string) {
+    const video = await this.getVideo(userId, videoId)
+    const recording = await VideoRecording.query()
+      .where('video_id', video.id)
+      .where('id', recordingId)
+      .firstOrFail()
+
+    await recording.delete()
+
+    const remainingRecording = await VideoRecording.query().where('video_id', video.id).first()
+    await video
+      .related('stages')
+      .query()
+      .where('label', 'Record')
+      .update({ done: Boolean(remainingRecording) })
+
+    if (!remainingRecording) {
+      video.preview = 'No cut yet'
+      await video.save()
+    }
+
+    return { video: this.serializeVideo(await this.getVideo(userId, video.id)) }
+  }
+
   async updateBrandBrainField(
     userId: string,
     fieldId: string,

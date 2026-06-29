@@ -338,8 +338,6 @@ function Recorder({ video }: { video: Video }) {
                 controls
                 playsInline
                 preload="auto"
-                autoPlay
-                muted
               />
             ) : (
               <video

@@ -128,4 +128,15 @@ export default class WorkspaceController {
 
     return await serialize.withoutWrapping(result)
   }
+
+  async deleteRecording({ auth, params, serialize }: HttpContext) {
+    const user = auth.getUserOrFail()
+    const result = await workspaceService.deleteVideoRecording(
+      user.id,
+      params.videoId,
+      params.recordingId,
+    )
+
+    return await serialize.withoutWrapping(result)
+  }
 }

@@ -84,6 +84,12 @@ const routes = {
     tokens: [{"old":"/content/videos/:id/recordings","type":0,"val":"content","end":""},{"old":"/content/videos/:id/recordings","type":0,"val":"videos","end":""},{"old":"/content/videos/:id/recordings","type":1,"val":"id","end":""},{"old":"/content/videos/:id/recordings","type":0,"val":"recordings","end":""}],
     types: placeholder as Registry['workspace.upload_recording']['types'],
   },
+  'workspace.delete_recording': {
+    methods: ["DELETE"],
+    pattern: '/content/videos/:videoId/recordings/:recordingId',
+    tokens: [{"old":"/content/videos/:videoId/recordings/:recordingId","type":0,"val":"content","end":""},{"old":"/content/videos/:videoId/recordings/:recordingId","type":0,"val":"videos","end":""},{"old":"/content/videos/:videoId/recordings/:recordingId","type":1,"val":"videoId","end":""},{"old":"/content/videos/:videoId/recordings/:recordingId","type":0,"val":"recordings","end":""},{"old":"/content/videos/:videoId/recordings/:recordingId","type":1,"val":"recordingId","end":""}],
+    types: placeholder as Registry['workspace.delete_recording']['types'],
+  },
   'workspace.update_brand_brain_field': {
     methods: ["PATCH"],
     pattern: '/content/brand-brain-fields/:id',

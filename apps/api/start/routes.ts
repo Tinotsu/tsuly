@@ -28,6 +28,7 @@ defineRouteGroup('content', () => {
   router.patch('videos/:id/script', [content.Workspace, 'updateVideoScript'])
   router.post('videos/:id/script/chat', [content.Workspace, 'chatVideoScript'])
   router.post('videos/:id/recordings', [content.Workspace, 'uploadRecording'])
+  router.delete('videos/:videoId/recordings/:recordingId', [content.Workspace, 'deleteRecording'])
   router.patch('brand-brain-fields/:id', [content.Workspace, 'updateBrandBrainField'])
   router.post('brand-brain-sections/:sectionId/fields', [
     content.Workspace,

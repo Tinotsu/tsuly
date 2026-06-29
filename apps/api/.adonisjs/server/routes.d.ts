@@ -17,6 +17,7 @@ export type ScannedRoutes = {
     'workspace.update_video_script': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'workspace.chat_video_script': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'workspace.upload_recording': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'workspace.delete_recording': { paramsTuple: [ParamValue,ParamValue]; params: {'videoId': ParamValue,'recordingId': ParamValue} }
     'workspace.update_brand_brain_field': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'workspace.create_brand_brain_field': { paramsTuple: [ParamValue]; params: {'sectionId': ParamValue} }
     'billing.webhook': { paramsTuple?: []; params?: {} }
@@ -52,6 +53,9 @@ export type ScannedRoutes = {
     'workspace.update_idea': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'workspace.update_video_script': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'workspace.update_brand_brain_field': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+  }
+  DELETE: {
+    'workspace.delete_recording': { paramsTuple: [ParamValue,ParamValue]; params: {'videoId': ParamValue,'recordingId': ParamValue} }
   }
 }
 declare module '@adonisjs/core/types/http' {

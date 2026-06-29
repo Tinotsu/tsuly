@@ -1,8 +1,21 @@
+import { useMutation } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { Check, ChevronDown, Clapperboard, FileText, Mic2, Plus, Search, Send } from 'lucide-react'
+import {
+  Check,
+  ChevronDown,
+  Clapperboard,
+  FileText,
+  Mic2,
+  Plus,
+  Search,
+  Send,
+  Trash2,
+} from 'lucide-react'
 
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { queryClient } from '@/lib/query_client'
+import { query } from '@/lib/tuyau'
 import { cn } from '@/lib/utils'
 
 import type { Video } from './types'
@@ -88,6 +101,26 @@ export function VideosView({
 }
 
 function VideoDetail({ video }: { video: Video }) {
+  const deleteRecording = useMutation({
+    mutationFn: async (recordingId: string) => {
+      const response = await fetch(
+        `${apiBaseUrl}/content/videos/${video.id}/recordings/${recordingId}`,
+        {
+          method: 'DELETE',
+          credentials: 'include',
+          headers: { Accept: 'application/json' },
+        },
+      )
+
+      if (!response.ok) throw new Error('Delete failed')
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: query.workspace.show.queryOptions({}).queryKey,
+      })
+    },
+  })
+
   return (
     <aside className="rounded-lg border bg-card">
       <div className="border-b p-4">
@@ -102,19 +135,33 @@ function VideoDetail({ video }: { video: Video }) {
           {video.recordings.length > 0 ? (
             <ul className="space-y-2">
               {video.recordings.map(recording => (
-                <li key={recording.id} className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Mic2 className="size-4 text-muted-foreground" />
-                    <span>{recording.label}</span>
+                <li key={recording.id} className="space-y-2 rounded-md border bg-background p-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Mic2 className="size-4 shrink-0 text-muted-foreground" />
+                      <span className="truncate">{recording.label}</span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      disabled={deleteRecording.isPending}
+                      onClick={() => deleteRecording.mutate(recording.id)}
+                      aria-label={`Delete ${recording.label}`}
+                    >
+                      <Trash2 />
+                    </Button>
                   </div>
                   {recording.storagePath && (
-                    <video
-                      src={`${apiBaseUrl}${recording.storagePath}`}
-                      className="max-h-64 w-full rounded-md bg-black object-contain"
-                      controls
-                      playsInline
-                      preload="metadata"
-                    />
+                    <div className="mx-auto w-full max-w-[220px] overflow-hidden rounded-md bg-black">
+                      <video
+                        src={`${apiBaseUrl}${recording.storagePath}`}
+                        className="aspect-[9/16] w-full object-cover"
+                        controls
+                        playsInline
+                        preload="metadata"
+                      />
+                    </div>
                   )}
                 </li>
               ))}

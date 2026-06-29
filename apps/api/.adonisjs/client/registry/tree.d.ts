@@ -22,6 +22,7 @@ export interface ApiDefinition {
     updateVideoScript: typeof routes['workspace.update_video_script']
     chatVideoScript: typeof routes['workspace.chat_video_script']
     uploadRecording: typeof routes['workspace.upload_recording']
+    deleteRecording: typeof routes['workspace.delete_recording']
     updateBrandBrainField: typeof routes['workspace.update_brand_brain_field']
     createBrandBrainField: typeof routes['workspace.create_brand_brain_field']
   }
