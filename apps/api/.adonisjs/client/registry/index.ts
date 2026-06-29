@@ -78,6 +78,12 @@ const routes = {
     tokens: [{"old":"/content/videos/:id/script/chat","type":0,"val":"content","end":""},{"old":"/content/videos/:id/script/chat","type":0,"val":"videos","end":""},{"old":"/content/videos/:id/script/chat","type":1,"val":"id","end":""},{"old":"/content/videos/:id/script/chat","type":0,"val":"script","end":""},{"old":"/content/videos/:id/script/chat","type":0,"val":"chat","end":""}],
     types: placeholder as Registry['workspace.chat_video_script']['types'],
   },
+  'workspace.upload_recording': {
+    methods: ["POST"],
+    pattern: '/content/videos/:id/recordings',
+    tokens: [{"old":"/content/videos/:id/recordings","type":0,"val":"content","end":""},{"old":"/content/videos/:id/recordings","type":0,"val":"videos","end":""},{"old":"/content/videos/:id/recordings","type":1,"val":"id","end":""},{"old":"/content/videos/:id/recordings","type":0,"val":"recordings","end":""}],
+    types: placeholder as Registry['workspace.upload_recording']['types'],
+  },
   'workspace.update_brand_brain_field': {
     methods: ["PATCH"],
     pattern: '/content/brand-brain-fields/:id',

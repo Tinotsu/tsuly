@@ -9,6 +9,8 @@ import type { Video } from './types'
 import { DetailBlock } from './ui/detail-block'
 import { VideoStage } from './ui/video-stage'
 
+const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3333'
+
 export function VideosView({
   videos,
   selectedVideo,
@@ -100,9 +102,20 @@ function VideoDetail({ video }: { video: Video }) {
           {video.recordings.length > 0 ? (
             <ul className="space-y-2">
               {video.recordings.map(recording => (
-                <li key={recording} className="flex items-center gap-2">
-                  <Mic2 className="size-4 text-muted-foreground" />
-                  {recording}
+                <li key={recording.id} className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Mic2 className="size-4 text-muted-foreground" />
+                    <span>{recording.label}</span>
+                  </div>
+                  {recording.storagePath && (
+                    <video
+                      src={`${apiBaseUrl}${recording.storagePath}`}
+                      className="max-h-64 w-full rounded-md bg-black object-contain"
+                      controls
+                      playsInline
+                      preload="metadata"
+                    />
+                  )}
                 </li>
               ))}
             </ul>
@@ -140,10 +153,14 @@ function VideoDetail({ video }: { video: Video }) {
           <FileText />
           Script
         </Link>
-        <Button type="button" variant="outline">
+        <Link
+          to="/videos/$videoId/record"
+          params={{ videoId: video.id }}
+          className={buttonVariants({ variant: 'outline' })}
+        >
           <Mic2 />
           Record
-        </Button>
+        </Link>
         <Button type="button" variant="outline">
           <Check />
           Validate

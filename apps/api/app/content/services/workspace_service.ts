@@ -1,9 +1,11 @@
 import db from '@adonisjs/lucid/services/db'
+import { DateTime } from 'luxon'
 
 import BrandBrainField from '../models/brand_brain_field.ts'
 import BrandBrainSection from '../models/brand_brain_section.ts'
 import Idea from '../models/idea.ts'
 import Video from '../models/video.ts'
+import VideoRecording from '../models/video_recording.ts'
 import ScriptGeneratorService, { type VideoScript } from './script_generator_service.ts'
 
 const scriptGenerator = new ScriptGeneratorService()
@@ -451,6 +453,60 @@ export default class WorkspaceService {
     return { video: this.serializeVideo(video), summary: revision.summary }
   }
 
+  async createVideoRecording(
+    userId: string,
+    videoId: string,
+    payload: {
+      scriptId: string
+      takeId: string
+      storagePath: string
+      mimeType: string
+      sizeBytes: number
+      durationMs: number
+      trimStartMs: number
+      trimEndMs: number
+      startedAt: string
+      stoppedAt: string
+    },
+  ) {
+    const video = await this.getVideo(userId, videoId)
+    const lastRecording = await VideoRecording.query()
+      .where('video_id', video.id)
+      .orderBy('sort_order', 'desc')
+      .first()
+    const sortOrder = (lastRecording?.sortOrder ?? -1) + 1
+
+    const recording = await video.related('recordings').create({
+      scriptId: payload.scriptId,
+      takeId: payload.takeId,
+      label: `Take #${sortOrder + 1} - uploaded raw`,
+      storagePath: payload.storagePath,
+      mimeType: payload.mimeType,
+      sizeBytes: payload.sizeBytes,
+      durationMs: payload.durationMs,
+      trimStartMs: payload.trimStartMs,
+      trimEndMs: payload.trimEndMs,
+      startedAt: DateTime.fromISO(payload.startedAt),
+      stoppedAt: DateTime.fromISO(payload.stoppedAt),
+      sortOrder,
+    })
+
+    video.preview = 'Auto-edit queued'
+    await video.save()
+    await video.related('stages').query().where('label', 'Record').update({ done: true })
+
+    const updatedVideo = await this.getVideo(userId, video.id)
+
+    return {
+      recording: {
+        id: recording.id,
+        takeId: recording.takeId,
+        label: recording.label,
+      },
+      video: this.serializeVideo(updatedVideo),
+    }
+  }
+
   async updateBrandBrainField(
     userId: string,
     fieldId: string,
@@ -525,7 +581,14 @@ export default class WorkspaceService {
         assetsNeeded: video.scriptAssetsNeeded,
         recordingNotes: video.scriptRecordingNotes,
       },
-      recordings: video.recordings.map(recording => recording.label),
+      recordings: video.recordings.map(recording => ({
+        id: recording.id,
+        label: recording.label,
+        storagePath: recording.storagePath,
+        takeId: recording.takeId,
+        durationMs: recording.durationMs,
+        createdAt: recording.createdAt.toISO(),
+      })),
       editing: video.editing.map(task => ({ label: task.label, done: task.done })),
       preview: video.preview,
       publish: video.publish,

@@ -187,16 +187,53 @@ export class VideoEditingTaskSchema extends BaseModel {
 }
 
 export class VideoRecordingSchema extends BaseModel {
-  static $columns = ['createdAt', 'id', 'label', 'sortOrder', 'updatedAt', 'videoId'] as const
+  static $columns = [
+    'createdAt',
+    'durationMs',
+    'id',
+    'label',
+    'mimeType',
+    'scriptId',
+    'sizeBytes',
+    'sortOrder',
+    'startedAt',
+    'stoppedAt',
+    'storagePath',
+    'takeId',
+    'trimEndMs',
+    'trimStartMs',
+    'updatedAt',
+    'videoId',
+  ] as const
   $columns = VideoRecordingSchema.$columns
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
+  @column()
+  declare durationMs: number | null
   @column({ isPrimary: true })
   declare id: string
   @column()
   declare label: string
   @column()
+  declare mimeType: string | null
+  @column()
+  declare scriptId: string | null
+  @column()
+  declare sizeBytes: number | null
+  @column()
   declare sortOrder: number
+  @column.dateTime()
+  declare startedAt: DateTime | null
+  @column.dateTime()
+  declare stoppedAt: DateTime | null
+  @column()
+  declare storagePath: string | null
+  @column()
+  declare takeId: string | null
+  @column()
+  declare trimEndMs: number | null
+  @column()
+  declare trimStartMs: number | null
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
   @column()

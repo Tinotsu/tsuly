@@ -1,10 +1,12 @@
 import { HttpContext } from '@adonisjs/core/http'
+import app from '@adonisjs/core/services/app'
 
 import WorkspaceService from '../services/workspace_service.ts'
 import {
   chatVideoScriptValidator,
   createBrandBrainFieldValidator,
   createIdeaValidator,
+  createVideoRecordingValidator,
   updateBrandBrainFieldValidator,
   updateIdeaValidator,
   updateVideoScriptValidator,
@@ -71,6 +73,58 @@ export default class WorkspaceController {
     const user = auth.getUserOrFail()
     const payload = await request.validateUsing(chatVideoScriptValidator)
     const result = await workspaceService.chatVideoScript(user.id, params.id, payload.message)
+
+    return await serialize.withoutWrapping(result)
+  }
+
+  async uploadRecording({ auth, params, request, response, serialize }: HttpContext) {
+    const user = auth.getUserOrFail()
+    const payload = await request.validateUsing(createVideoRecordingValidator)
+    const video = request.file('video', {
+      size: '500mb',
+      extnames: ['mp4', 'webm', 'mov', 'm4v'],
+    })
+
+    if (!video || !video.isValid) {
+      return response.badRequest({
+        message: 'Recording upload failed',
+        errors: video?.errors ?? [],
+      })
+    }
+
+    const durationMs = Number(payload.durationMs)
+    const trimStartMs = Number(payload.trimStartMs ?? '0')
+    const trimEndMs = Number(payload.trimEndMs ?? payload.durationMs)
+
+    if (
+      !Number.isFinite(durationMs) ||
+      !Number.isFinite(trimStartMs) ||
+      !Number.isFinite(trimEndMs) ||
+      trimStartMs < 0 ||
+      trimEndMs <= trimStartMs
+    ) {
+      return response.unprocessableEntity({ message: 'Invalid recording timing' })
+    }
+
+    const extension = video.extname ?? 'webm'
+    const fileName = `${payload.takeId}.${extension}`
+    await video.move(app.publicPath('uploads/recordings'), {
+      name: fileName,
+      overwrite: true,
+    })
+
+    const result = await workspaceService.createVideoRecording(user.id, params.id, {
+      scriptId: payload.scriptId,
+      takeId: payload.takeId,
+      storagePath: `/uploads/recordings/${fileName}`,
+      mimeType: video.type && video.subtype ? `${video.type}/${video.subtype}` : 'video/webm',
+      sizeBytes: video.size,
+      durationMs,
+      trimStartMs,
+      trimEndMs,
+      startedAt: payload.startedAt,
+      stoppedAt: payload.stoppedAt,
+    })
 
     return await serialize.withoutWrapping(result)
   }

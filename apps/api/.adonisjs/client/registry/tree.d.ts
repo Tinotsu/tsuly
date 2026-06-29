@@ -21,6 +21,7 @@ export interface ApiDefinition {
     generateScriptFromIdea: typeof routes['workspace.generate_script_from_idea']
     updateVideoScript: typeof routes['workspace.update_video_script']
     chatVideoScript: typeof routes['workspace.chat_video_script']
+    uploadRecording: typeof routes['workspace.upload_recording']
     updateBrandBrainField: typeof routes['workspace.update_brand_brain_field']
     createBrandBrainField: typeof routes['workspace.create_brand_brain_field']
   }

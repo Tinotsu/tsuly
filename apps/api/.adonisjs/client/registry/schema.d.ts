@@ -151,6 +151,18 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['chatVideoScript']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
   }
+  'workspace.upload_recording': {
+    methods: ["POST"]
+    pattern: '/content/videos/:id/recordings'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#app/content/validators/workspace').createVideoRecordingValidator)>>
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#app/content/validators/workspace').createVideoRecordingValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['uploadRecording']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['uploadRecording']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
   'workspace.update_brand_brain_field': {
     methods: ["PATCH"]
     pattern: '/content/brand-brain-fields/:id'

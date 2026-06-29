@@ -20,7 +20,14 @@ export type Workspace = {
       assetsNeeded: string
       recordingNotes: string
     }
-    recordings: string[]
+    recordings: Array<{
+      id: string
+      label: string
+      storagePath: string | null
+      takeId: string | null
+      durationMs: number | null
+      createdAt: string | null
+    }>
     editing: Array<{ label: string; done: boolean }>
     preview: string
     publish: string

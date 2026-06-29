@@ -30,6 +30,7 @@ pids
 *.seed
 *.pid.lock
 count.txt
+apps/api/public/uploads/
 
 # Frontend assets compiled code
 public/assets/

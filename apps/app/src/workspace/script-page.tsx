@@ -122,10 +122,14 @@ export function ScriptPage({ videoId }: { videoId: string }) {
             <h1 className="mt-1 text-2xl font-semibold tracking-tight">{selectedVideo.title}</h1>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="outline">
+            <Link
+              to="/videos/$videoId/record"
+              params={{ videoId: selectedVideo.id }}
+              className={buttonVariants({ variant: 'outline' })}
+            >
               <Video />
               Start recording
-            </Button>
+            </Link>
             <Button type="button">
               <FolderOpen />
               Fill assets

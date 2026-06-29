@@ -71,3 +71,15 @@ export const chatVideoScriptValidator = vine.compile(
     message: cardText(),
   }),
 )
+
+export const createVideoRecordingValidator = vine.compile(
+  vine.object({
+    scriptId: vine.string(),
+    takeId: vine.string(),
+    startedAt: vine.string(),
+    stoppedAt: vine.string(),
+    durationMs: vine.string(),
+    trimStartMs: vine.string().optional(),
+    trimEndMs: vine.string().optional(),
+  }),
+)

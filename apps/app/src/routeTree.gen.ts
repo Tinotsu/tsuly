@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRegisterRouteImport } from './routes/auth/register'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as VideosVideoIdScriptRouteImport } from './routes/videos/$videoId/script'
+import { Route as VideosVideoIdRecordRouteImport } from './routes/videos/$videoId/record'
 
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
@@ -46,6 +47,11 @@ const VideosVideoIdScriptRoute = VideosVideoIdScriptRouteImport.update({
   path: '/videos/$videoId/script',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VideosVideoIdRecordRoute = VideosVideoIdRecordRouteImport.update({
+  id: '/videos/$videoId/record',
+  path: '/videos/$videoId/record',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -53,6 +59,7 @@ export interface FileRoutesByFullPath {
   '/pricing': typeof PricingRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
+  '/videos/$videoId/record': typeof VideosVideoIdRecordRoute
   '/videos/$videoId/script': typeof VideosVideoIdScriptRoute
 }
 export interface FileRoutesByTo {
@@ -61,6 +68,7 @@ export interface FileRoutesByTo {
   '/pricing': typeof PricingRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
+  '/videos/$videoId/record': typeof VideosVideoIdRecordRoute
   '/videos/$videoId/script': typeof VideosVideoIdScriptRoute
 }
 export interface FileRoutesById {
@@ -70,6 +78,7 @@ export interface FileRoutesById {
   '/pricing': typeof PricingRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
+  '/videos/$videoId/record': typeof VideosVideoIdRecordRoute
   '/videos/$videoId/script': typeof VideosVideoIdScriptRoute
 }
 export interface FileRouteTypes {
@@ -80,6 +89,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/auth/login'
     | '/auth/register'
+    | '/videos/$videoId/record'
     | '/videos/$videoId/script'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -88,6 +98,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/auth/login'
     | '/auth/register'
+    | '/videos/$videoId/record'
     | '/videos/$videoId/script'
   id:
     | '__root__'
@@ -96,6 +107,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/auth/login'
     | '/auth/register'
+    | '/videos/$videoId/record'
     | '/videos/$videoId/script'
   fileRoutesById: FileRoutesById
 }
@@ -105,6 +117,7 @@ export interface RootRouteChildren {
   PricingRoute: typeof PricingRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthRegisterRoute: typeof AuthRegisterRoute
+  VideosVideoIdRecordRoute: typeof VideosVideoIdRecordRoute
   VideosVideoIdScriptRoute: typeof VideosVideoIdScriptRoute
 }
 
@@ -152,6 +165,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VideosVideoIdScriptRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/videos/$videoId/record': {
+      id: '/videos/$videoId/record'
+      path: '/videos/$videoId/record'
+      fullPath: '/videos/$videoId/record'
+      preLoaderRoute: typeof VideosVideoIdRecordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -161,6 +181,7 @@ const rootRouteChildren: RootRouteChildren = {
   PricingRoute: PricingRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthRegisterRoute: AuthRegisterRoute,
+  VideosVideoIdRecordRoute: VideosVideoIdRecordRoute,
   VideosVideoIdScriptRoute: VideosVideoIdScriptRoute,
 }
 export const routeTree = rootRouteImport
