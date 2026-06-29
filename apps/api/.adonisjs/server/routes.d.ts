@@ -11,6 +11,8 @@ export type ScannedRoutes = {
     'billing.checkout': { paramsTuple?: []; params?: {} }
     'billing.portal': { paramsTuple?: []; params?: {} }
     'workspace.show': { paramsTuple?: []; params?: {} }
+    'workspace.create_idea': { paramsTuple?: []; params?: {} }
+    'workspace.update_idea': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'workspace.update_brand_brain_field': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'workspace.create_brand_brain_field': { paramsTuple: [ParamValue]; params: {'sectionId': ParamValue} }
     'billing.webhook': { paramsTuple?: []; params?: {} }
@@ -23,6 +25,7 @@ export type ScannedRoutes = {
     'auth.logout': { paramsTuple?: []; params?: {} }
     'billing.checkout': { paramsTuple?: []; params?: {} }
     'billing.portal': { paramsTuple?: []; params?: {} }
+    'workspace.create_idea': { paramsTuple?: []; params?: {} }
     'workspace.create_brand_brain_field': { paramsTuple: [ParamValue]; params: {'sectionId': ParamValue} }
     'billing.webhook': { paramsTuple?: []; params?: {} }
   }
@@ -39,6 +42,7 @@ export type ScannedRoutes = {
     'health_checks': { paramsTuple?: []; params?: {} }
   }
   PATCH: {
+    'workspace.update_idea': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'workspace.update_brand_brain_field': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
 }

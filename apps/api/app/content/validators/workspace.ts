@@ -37,3 +37,23 @@ export const createBrandBrainFieldValidator = vine.compile(
     value: cardText(),
   }),
 )
+
+export const createIdeaValidator = vine.compile(
+  vine.object({
+    title: vine.string().optional(),
+    note: cardText().optional(),
+    pillar: vine.string().optional(),
+    rating: vine.number().min(0).max(5).optional(),
+    status: vine.string().optional(),
+  }),
+)
+
+export const updateIdeaValidator = vine.compile(
+  vine.object({
+    title: vine.string().optional(),
+    note: cardText().optional(),
+    pillar: vine.string().optional(),
+    rating: vine.number().min(0).max(5).optional(),
+    status: vine.string().optional(),
+  }),
+)

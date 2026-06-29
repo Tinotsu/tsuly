@@ -91,6 +91,30 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['show']>>>
     }
   }
+  'workspace.create_idea': {
+    methods: ["POST"]
+    pattern: '/content/ideas'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#app/content/validators/workspace').createIdeaValidator)>>
+      paramsTuple: []
+      params: {}
+      query: ExtractQuery<InferInput<(typeof import('#app/content/validators/workspace').createIdeaValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['createIdea']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['createIdea']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'workspace.update_idea': {
+    methods: ["PATCH"]
+    pattern: '/content/ideas/:id'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#app/content/validators/workspace').updateIdeaValidator)>>
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#app/content/validators/workspace').updateIdeaValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['updateIdea']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['updateIdea']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
   'workspace.update_brand_brain_field': {
     methods: ["PATCH"]
     pattern: '/content/brand-brain-fields/:id'

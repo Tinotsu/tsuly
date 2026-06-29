@@ -43,10 +43,7 @@ type Workspace = {
     pillar: string
     status: string
     rating: number
-    problem: string
-    hook: string
-    keyPoints: string[]
-    cta: string
+    note: string
   }>
   videos: Array<{
     id: string
@@ -244,15 +241,46 @@ function IdeasView({
   selectedIdea: Idea
   onSelectIdea: (id: Idea['id']) => void
 }) {
+  const [draftIdeas, setDraftIdeas] = useState(ideas)
+  const draftSelectedIdea =
+    draftIdeas.find(idea => idea.id === selectedIdea.id) ?? draftIdeas[0] ?? selectedIdea
+  const saveIdea = useMutation(query.workspace.updateIdea.mutationOptions())
+  const createIdea = useMutation(
+    query.workspace.createIdea.mutationOptions({
+      onSuccess: idea => {
+        setDraftIdeas(current => [...current, idea])
+        onSelectIdea(idea.id)
+      },
+    }),
+  )
+
+  useEffect(() => setDraftIdeas(ideas), [ideas])
+
+  function updateDraftIdea(id: Idea['id'], values: Partial<Idea>) {
+    setDraftIdeas(current => current.map(idea => (idea.id === id ? { ...idea, ...values } : idea)))
+  }
+
+  function saveDraftIdea(idea: Idea) {
+    saveIdea.mutate({
+      params: { id: idea.id },
+      body: {
+        title: idea.title,
+        note: idea.note,
+        pillar: idea.pillar,
+        rating: idea.rating,
+      },
+    })
+  }
+
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_420px]">
       <section className="rounded-lg border bg-card">
         <div className="flex items-center justify-between gap-3 border-b p-4">
           <div>
             <h2 className="text-lg font-semibold">Ideas</h2>
-            <p className="text-sm text-muted-foreground">{ideas.length} active drafts</p>
+            <p className="text-sm text-muted-foreground">{draftIdeas.length} active drafts</p>
           </div>
-          <Button type="button">
+          <Button type="button" onClick={() => createIdea.mutate({ body: {} })}>
             <Plus />
             New idea
           </Button>
@@ -260,26 +288,26 @@ function IdeasView({
 
         <div className="p-4">
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {ideas.map(idea => (
+            {draftIdeas.map(idea => (
               <button
                 key={idea.id}
                 type="button"
                 onClick={() => onSelectIdea(idea.id)}
                 className={cn(
                   'flex min-h-44 flex-col rounded-lg border bg-background p-4 text-left transition hover:border-foreground/30 hover:bg-muted/30',
-                  selectedIdea.id === idea.id && 'border-foreground bg-muted/40',
+                  draftSelectedIdea.id === idea.id && 'border-foreground bg-muted/40',
                 )}
               >
                 <span className="line-clamp-2 text-base font-semibold leading-snug">
                   {idea.title}
                 </span>
                 <span className="mt-auto">
-                  <Badge variant="secondary">{idea.pillar}</Badge>
+                  {idea.pillar ? <Badge variant="secondary">{idea.pillar}</Badge> : null}
                   <span
                     className="mt-3 flex items-center gap-0.5"
                     aria-label={`${idea.rating} stars`}
                   >
-                    <Stars rating={idea.rating} />
+                    <StarRating rating={idea.rating} />
                   </span>
                 </span>
               </button>
@@ -297,33 +325,71 @@ function IdeasView({
         </div>
       </section>
 
-      <IdeaDetail idea={selectedIdea} />
+      <IdeaDetail
+        idea={draftSelectedIdea}
+        onUpdate={values => updateDraftIdea(draftSelectedIdea.id, values)}
+        onSave={saveDraftIdea}
+      />
     </div>
   )
 }
 
-function IdeaDetail({ idea }: { idea: Idea }) {
+function IdeaDetail({
+  idea,
+  onUpdate,
+  onSave,
+}: {
+  idea: Idea
+  onUpdate: (values: Partial<Idea>) => void
+  onSave: (idea: Idea) => void
+}) {
   return (
     <aside className="rounded-lg border bg-card">
       <div className="border-b p-4">
         <p className="text-sm font-medium text-muted-foreground">Idea</p>
-        <h2 className="mt-1 text-xl font-semibold tracking-tight">{idea.title}</h2>
+        <input
+          value={idea.title}
+          onChange={event => onUpdate({ title: event.target.value })}
+          onBlur={() => onSave(idea)}
+          className="mt-1 w-full bg-transparent text-xl font-semibold tracking-tight outline-none focus:text-foreground"
+        />
       </div>
 
       <div className="space-y-4 p-4">
-        <Field label="Problem">{idea.problem}</Field>
-        <Field label="Hook">{idea.hook}</Field>
         <div>
-          <p className="text-sm font-medium text-muted-foreground">Key points</p>
-          <ul className="mt-2 space-y-2">
-            {idea.keyPoints.map(point => (
-              <li key={point} className="rounded-md bg-muted/50 px-3 py-2 text-sm">
-                {point}
-              </li>
-            ))}
-          </ul>
+          <p className="text-sm font-medium text-muted-foreground">Tag</p>
+          <input
+            value={idea.pillar}
+            onChange={event => onUpdate({ pillar: event.target.value })}
+            onBlur={() => onSave(idea)}
+            placeholder="Add a tag"
+            className="mt-2 w-full rounded-md border bg-background px-3 py-2 text-sm leading-6 outline-none focus:text-foreground"
+          />
         </div>
-        <Field label="CTA">{idea.cta}</Field>
+        <div>
+          <p className="text-sm font-medium text-muted-foreground">Rating</p>
+          <StarRating
+            className="mt-2"
+            rating={idea.rating}
+            onChange={rating => {
+              onUpdate({ rating })
+              onSave({ ...idea, rating })
+            }}
+          />
+        </div>
+        <div>
+          <p className="text-sm font-medium text-muted-foreground">Note</p>
+          <textarea
+            value={idea.note}
+            onChange={event => onUpdate({ note: limitCardValue(event.target, event.target.value) })}
+            onBlur={() => onSave(idea)}
+            rows={BRAND_BRAIN_CARD_LINE_CAPACITY}
+            style={{
+              height: `${BRAND_BRAIN_CARD_LINE_CAPACITY * BRAND_BRAIN_CARD_LINE_HEIGHT_REM}rem`,
+            }}
+            className="mt-2 w-full resize-none overflow-hidden rounded-md border bg-background px-3 py-2 text-sm leading-6 outline-none focus:text-foreground"
+          />
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2 border-t p-4">
@@ -663,15 +729,6 @@ function TabButton({
   )
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div>
-      <p className="text-sm font-medium text-muted-foreground">{label}</p>
-      <p className="mt-2 rounded-md border bg-background px-3 py-2 text-sm leading-6">{children}</p>
-    </div>
-  )
-}
-
 function DetailBlock({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="space-y-2 p-4">
@@ -690,16 +747,48 @@ function FilterPill({ children }: { children: ReactNode }) {
   )
 }
 
-function Stars({ rating }: { rating: number }) {
-  return Array.from({ length: 5 }, (_, index) => (
-    <Star
-      key={index}
-      className={cn(
-        'size-4',
-        index < rating ? 'fill-amber-400 text-amber-500' : 'text-muted-foreground/30',
-      )}
-    />
-  ))
+function StarRating({
+  rating,
+  onChange,
+  className,
+}: {
+  rating: number
+  onChange?: (rating: number) => void
+  className?: string
+}) {
+  return (
+    <span className={cn('flex items-center gap-0.5', className)}>
+      {Array.from({ length: 5 }, (_, index) => {
+        const star = (
+          <Star
+            className={cn(
+              'size-4',
+              index < rating ? 'fill-amber-400 text-amber-500' : 'text-muted-foreground/30',
+            )}
+          />
+        )
+
+        if (!onChange) {
+          return <span key={index}>{star}</span>
+        }
+
+        return (
+          <button
+            key={index}
+            type="button"
+            onClick={event => {
+              event.stopPropagation()
+              onChange(index + 1)
+            }}
+            className="rounded-sm transition hover:scale-110"
+            aria-label={`Rate ${index + 1} stars`}
+          >
+            {star}
+          </button>
+        )
+      })}
+    </span>
+  )
 }
 
 function VideoStage({ done, label }: { done: boolean; label: string }) {

@@ -48,6 +48,18 @@ const routes = {
     tokens: [{"old":"/content/workspace","type":0,"val":"content","end":""},{"old":"/content/workspace","type":0,"val":"workspace","end":""}],
     types: placeholder as Registry['workspace.show']['types'],
   },
+  'workspace.create_idea': {
+    methods: ["POST"],
+    pattern: '/content/ideas',
+    tokens: [{"old":"/content/ideas","type":0,"val":"content","end":""},{"old":"/content/ideas","type":0,"val":"ideas","end":""}],
+    types: placeholder as Registry['workspace.create_idea']['types'],
+  },
+  'workspace.update_idea': {
+    methods: ["PATCH"],
+    pattern: '/content/ideas/:id',
+    tokens: [{"old":"/content/ideas/:id","type":0,"val":"content","end":""},{"old":"/content/ideas/:id","type":0,"val":"ideas","end":""},{"old":"/content/ideas/:id","type":1,"val":"id","end":""}],
+    types: placeholder as Registry['workspace.update_idea']['types'],
+  },
   'workspace.update_brand_brain_field': {
     methods: ["PATCH"],
     pattern: '/content/brand-brain-fields/:id',

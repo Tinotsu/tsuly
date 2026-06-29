@@ -233,10 +233,7 @@ export default class WorkspaceService {
       await this.createDefaultWorkspace(userId)
     }
 
-    const ideas = await Idea.query()
-      .where('user_id', userId)
-      .orderBy('sort_order')
-      .preload('keyPoints', query => query.orderBy('sort_order'))
+    const ideas = await Idea.query().where('user_id', userId).orderBy('sort_order')
 
     const videos = await Video.query()
       .where('user_id', userId)
@@ -251,17 +248,7 @@ export default class WorkspaceService {
       .preload('fields', query => query.orderBy('sort_order'))
 
     return {
-      ideas: ideas.map(idea => ({
-        id: idea.id,
-        title: idea.title,
-        pillar: idea.pillar,
-        status: idea.status,
-        rating: idea.rating,
-        problem: idea.problem,
-        hook: idea.hook,
-        keyPoints: idea.keyPoints.map(point => point.body),
-        cta: idea.cta,
-      })),
+      ideas: ideas.map(idea => this.serializeIdea(idea)),
       videos: videos.map(video => ({
         id: video.id,
         title: video.title,
@@ -285,6 +272,60 @@ export default class WorkspaceService {
         })),
       })),
     }
+  }
+
+  async createIdea(
+    userId: string,
+    payload: {
+      title?: string
+      note?: string
+      pillar?: string
+      rating?: number
+      status?: string
+    } = {},
+  ) {
+    const lastIdea = await Idea.query()
+      .where('user_id', userId)
+      .orderBy('sort_order', 'desc')
+      .first()
+
+    const idea = await Idea.create({
+      userId,
+      title: payload.title ?? 'New idea',
+      pillar: payload.pillar ?? '',
+      status: payload.status ?? 'Idea',
+      rating: payload.rating ?? 0,
+      problem: payload.note ?? '',
+      hook: '',
+      cta: '',
+      sortOrder: (lastIdea?.sortOrder ?? -1) + 1,
+    })
+
+    return this.serializeIdea(idea)
+  }
+
+  async updateIdea(
+    userId: string,
+    ideaId: string,
+    payload: {
+      title?: string
+      note?: string
+      pillar?: string
+      rating?: number
+      status?: string
+    },
+  ) {
+    const idea = await Idea.query().where('user_id', userId).where('id', ideaId).firstOrFail()
+
+    if (payload.title !== undefined) idea.title = payload.title
+    if (payload.note !== undefined) idea.problem = payload.note
+    if (payload.pillar !== undefined) idea.pillar = payload.pillar
+    if (payload.rating !== undefined) idea.rating = payload.rating
+    if (payload.status !== undefined) idea.status = payload.status
+
+    await idea.save()
+
+    return this.serializeIdea(idea)
   }
 
   async updateBrandBrainField(
@@ -334,6 +375,17 @@ export default class WorkspaceService {
     })
 
     return { id: field.id, label: field.label, value: field.value }
+  }
+
+  private serializeIdea(idea: Idea) {
+    return {
+      id: idea.id,
+      title: idea.title,
+      pillar: idea.pillar,
+      status: idea.status,
+      rating: idea.rating,
+      note: idea.problem,
+    }
   }
 
   private async createDefaultWorkspace(userId: string) {

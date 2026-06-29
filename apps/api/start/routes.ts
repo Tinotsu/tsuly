@@ -22,6 +22,8 @@ defineRouteGroup('billing', () => {
 
 defineRouteGroup('content', () => {
   router.get('workspace', [content.Workspace, 'show'])
+  router.post('ideas', [content.Workspace, 'createIdea'])
+  router.patch('ideas/:id', [content.Workspace, 'updateIdea'])
   router.patch('brand-brain-fields/:id', [content.Workspace, 'updateBrandBrainField'])
   router.post('brand-brain-sections/:sectionId/fields', [
     content.Workspace,
