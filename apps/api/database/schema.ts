@@ -159,6 +159,57 @@ export class UserSchema extends BaseModel {
   declare updatedAt: DateTime | null
 }
 
+export class VideoEditingJobSchema extends BaseModel {
+  static $columns = [
+    'audioPath',
+    'captionsPath',
+    'createdAt',
+    'errorMessage',
+    'finalPath',
+    'finishedAt',
+    'id',
+    'normalizedPath',
+    'originalPath',
+    'recordingId',
+    'startedAt',
+    'status',
+    'transcriptPath',
+    'updatedAt',
+    'videoId',
+  ] as const
+  $columns = VideoEditingJobSchema.$columns
+  @column()
+  declare audioPath: string | null
+  @column()
+  declare captionsPath: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare errorMessage: string | null
+  @column()
+  declare finalPath: string | null
+  @column.dateTime()
+  declare finishedAt: DateTime | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare normalizedPath: string | null
+  @column()
+  declare originalPath: string
+  @column()
+  declare recordingId: string
+  @column.dateTime()
+  declare startedAt: DateTime | null
+  @column()
+  declare status: string
+  @column()
+  declare transcriptPath: string | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+  @column()
+  declare videoId: string
+}
+
 export class VideoEditingTaskSchema extends BaseModel {
   static $columns = [
     'createdAt',

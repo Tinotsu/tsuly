@@ -5,6 +5,7 @@ import { WithPrimaryUuid } from '#app/core/mixins/with_uuid_pk'
 import { WithTimestamps } from '#app/core/mixins/with_timestamps'
 
 import type { HasMany } from '@adonisjs/lucid/types/relations'
+import VideoEditingJob from './video_editing_job.ts'
 import VideoEditingTask from './video_editing_task.ts'
 import VideoRecording from './video_recording.ts'
 import VideoStage from './video_stage.ts'
@@ -33,4 +34,7 @@ export default class Video extends compose(BaseModel, WithTimestamps, WithPrimar
 
   @hasMany(() => VideoEditingTask)
   declare editing: HasMany<typeof VideoEditingTask>
+
+  @hasMany(() => VideoEditingJob)
+  declare editingJobs: HasMany<typeof VideoEditingJob>
 }

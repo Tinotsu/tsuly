@@ -2,6 +2,7 @@ import { HttpContext } from '@adonisjs/core/http'
 import app from '@adonisjs/core/services/app'
 
 import WorkspaceService from '../services/workspace_service.ts'
+import { enqueueVideoEditingJob } from '../services/video_editing_queue.ts'
 import {
   chatVideoScriptValidator,
   createBrandBrainFieldValidator,
@@ -125,6 +126,8 @@ export default class WorkspaceController {
       startedAt: payload.startedAt,
       stoppedAt: payload.stoppedAt,
     })
+
+    await enqueueVideoEditingJob(result.editingJob.id)
 
     return await serialize.withoutWrapping(result)
   }

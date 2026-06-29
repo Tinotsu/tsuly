@@ -9,6 +9,14 @@ services:
     ports:
       - '5432:5432'
 
+  redis:
+    image: redis:8-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redisdata:/data
+    ports:
+      - '6379:6379'
+
 volumes:
   postgres:
   redisdata:

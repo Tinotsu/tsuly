@@ -28,6 +28,12 @@ export type Workspace = {
       durationMs: number | null
       createdAt: string | null
     }>
+    editingJob: {
+      id: string
+      status: 'queued' | 'processing' | 'ready' | 'failed'
+      finalPath: string | null
+      errorMessage: string | null
+    } | null
     editing: Array<{ label: string; done: boolean }>
     preview: string
     publish: string

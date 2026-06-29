@@ -35,6 +35,7 @@
     "start": "node bin/server.js",
     "build": "node ace build",
     "dev": "node ace serve --hmr",
+    "worker": "node ace video:editing-worker",
     "test": "node ace test",
     "quick:test": "node ace test",
     "typecheck": "tsc --noEmit"
@@ -49,6 +50,8 @@
     "@adonisjs/static": "^2.0.1",
     "@tuyau/core": "catalog:",
     "@vinejs/vine": "^4.3.0",
+    "bullmq": "^5.66.1",
+    "jimp": "^1.6.1",
     "luxon": "^3.7.2",
     "pg": "^8.20.0",
     "reflect-metadata": "^0.2.2",

@@ -5,6 +5,7 @@ import BrandBrainField from '../models/brand_brain_field.ts'
 import BrandBrainSection from '../models/brand_brain_section.ts'
 import Idea from '../models/idea.ts'
 import Video from '../models/video.ts'
+import VideoEditingJob from '../models/video_editing_job.ts'
 import VideoRecording from '../models/video_recording.ts'
 import ScriptGeneratorService, { type VideoScript } from './script_generator_service.ts'
 
@@ -273,6 +274,7 @@ export default class WorkspaceService {
       .preload('stages', query => query.orderBy('sort_order'))
       .preload('recordings', query => query.orderBy('sort_order'))
       .preload('editing', query => query.orderBy('sort_order'))
+      .preload('editingJobs', query => query.orderBy('created_at', 'desc'))
 
     const brandBrain = await BrandBrainSection.query()
       .where('user_id', userId)
@@ -490,6 +492,12 @@ export default class WorkspaceService {
       stoppedAt: DateTime.fromISO(payload.stoppedAt),
       sortOrder,
     })
+    const editingJob = await VideoEditingJob.create({
+      videoId: video.id,
+      recordingId: recording.id,
+      status: 'queued',
+      originalPath: payload.storagePath,
+    })
 
     video.preview = 'Auto-edit queued'
     await video.save()
@@ -502,6 +510,10 @@ export default class WorkspaceService {
         id: recording.id,
         takeId: recording.takeId,
         label: recording.label,
+      },
+      editingJob: {
+        id: editingJob.id,
+        status: editingJob.status,
       },
       video: this.serializeVideo(updatedVideo),
     }
@@ -592,6 +604,8 @@ export default class WorkspaceService {
   }
 
   private serializeVideo(video: Video) {
+    const editingJob = video.editingJobs?.[0]
+
     return {
       id: video.id,
       title: video.title,
@@ -613,6 +627,14 @@ export default class WorkspaceService {
         durationMs: recording.durationMs,
         createdAt: recording.createdAt.toISO(),
       })),
+      editingJob: editingJob
+        ? {
+            id: editingJob.id,
+            status: editingJob.status,
+            finalPath: editingJob.finalPath,
+            errorMessage: editingJob.errorMessage,
+          }
+        : null,
       editing: video.editing.map(task => ({ label: task.label, done: task.done })),
       preview: video.preview,
       publish: video.publish,
@@ -647,6 +669,7 @@ export default class WorkspaceService {
       .preload('stages', query => query.orderBy('sort_order'))
       .preload('recordings', query => query.orderBy('sort_order'))
       .preload('editing', query => query.orderBy('sort_order'))
+      .preload('editingJobs', query => query.orderBy('created_at', 'desc'))
       .firstOrFail()
   }
 
