@@ -59,8 +59,8 @@ function Recorder({ video }: { video: Video }) {
   const pausedMsRef = useRef(0)
 
   const promptLines = useMemo(
-    () => buildPromptLines(video.script.hook, video.script.spokenScript),
-    [video.script.hook, video.script.spokenScript],
+    () => buildPromptLines(video.script.spokenScript),
+    [video.script.spokenScript],
   )
   const [phase, setPhase] = useState<RecorderPhase>('idle')
   const [permissionError, setPermissionError] = useState('')
@@ -241,6 +241,11 @@ function Recorder({ video }: { video: Video }) {
     recorderRef.current?.stop()
   }
 
+  function toggleRecording() {
+    if (phase === 'recording') pauseRecording()
+    if (phase === 'paused') resumeRecording()
+  }
+
   function retake() {
     if (take) URL.revokeObjectURL(take.url)
     takeUrlRef.current = ''
@@ -325,7 +330,13 @@ function Recorder({ video }: { video: Video }) {
         />
 
         <section className="flex min-h-[calc(100svh-5.5rem)] flex-col justify-center gap-3 lg:min-h-[calc(100vh-7rem)]">
-          <div className="relative mx-auto aspect-[9/16] h-[calc(100svh-11rem)] max-h-[760px] min-h-[420px] w-full max-w-[430px] overflow-hidden rounded-lg bg-black shadow-sm lg:h-[calc(100vh-12rem)]">
+          <div
+            className={cn(
+              'relative mx-auto aspect-[9/16] h-[calc(100svh-11rem)] max-h-[760px] min-h-[420px] w-full max-w-[430px] overflow-hidden rounded-lg bg-black shadow-sm lg:h-[calc(100vh-12rem)]',
+              (phase === 'recording' || phase === 'paused') && 'cursor-pointer',
+            )}
+            onClick={toggleRecording}
+          >
             {take &&
             phase !== 'idle' &&
             phase !== 'countdown' &&
@@ -525,28 +536,29 @@ function TeleprompterOverlay({
   lineHighlight: boolean
 }) {
   const lineHeight = Math.round(fontSize * 1.35)
+  const firstVisibleLine = Math.max(0, currentLine - 1)
+  const visibleLines = lines.slice(firstVisibleLine, firstVisibleLine + 3)
 
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-[20%] h-[58%] overflow-hidden px-5 text-center text-white [text-shadow:0_2px_14px_rgb(0_0_0/0.75)]">
-      <div
-        className="transition-transform duration-300 ease-linear"
-        style={{
-          transform: `translateY(calc(50% - ${currentLine * lineHeight + lineHeight / 2}px))`,
-        }}
-      >
-        {lines.map((line, index) => (
-          <p
-            key={`${line}-${index}`}
-            className={cn(
-              'mx-auto max-w-[92%] font-semibold',
-              lineHighlight && index !== currentLine && 'opacity-45',
-              lineHighlight && index === currentLine && 'rounded-lg bg-black/35 px-2',
-            )}
-            style={{ fontSize, lineHeight: `${lineHeight}px` }}
-          >
-            {line}
-          </p>
-        ))}
+    <div className="pointer-events-none absolute inset-x-0 top-[20%] flex h-[58%] items-center px-5 text-center text-white [text-shadow:0_2px_14px_rgb(0_0_0/0.75)]">
+      <div className="w-full transition-opacity duration-300">
+        {visibleLines.map((line, index) => {
+          const lineIndex = firstVisibleLine + index
+
+          return (
+            <p
+              key={`${line}-${lineIndex}`}
+              className={cn(
+                'mx-auto max-w-[92%] font-semibold',
+                lineHighlight && lineIndex !== currentLine && 'opacity-45',
+                lineHighlight && lineIndex === currentLine && 'rounded-lg bg-black/35 px-2',
+              )}
+              style={{ fontSize, lineHeight: `${lineHeight}px` }}
+            >
+              {line}
+            </p>
+          )
+        })}
       </div>
     </div>
   )
@@ -780,12 +792,12 @@ function ToggleControl({
   )
 }
 
-function buildPromptLines(hook: string, spokenScript: string) {
-  const words = [hook, spokenScript].join(' ').split(/\s+/).filter(Boolean)
+function buildPromptLines(spokenScript: string) {
+  const words = spokenScript.split(/\s+/).filter(Boolean)
   const lines: string[] = []
 
-  for (let index = 0; index < words.length; index += 7) {
-    lines.push(words.slice(index, index + 7).join(' '))
+  for (let index = 0; index < words.length; index += 5) {
+    lines.push(words.slice(index, index + 5).join(' '))
   }
 
   return lines.length ? lines : ['']
