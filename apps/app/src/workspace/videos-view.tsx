@@ -3,6 +3,8 @@ import { Link } from '@tanstack/react-router'
 import {
   Check,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Clapperboard,
   Download,
   FileText,
@@ -14,7 +16,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -28,17 +30,12 @@ import { VideoStage } from './ui/video-stage'
 
 const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3333'
 
-export function VideosView({
-  videos,
-  selectedVideo,
-  onSelectVideo,
-}: {
-  videos: Video[]
-  selectedVideo: Video
-  onSelectVideo: (id: Video['id']) => void
-}) {
+export function VideosView({ videos }: { videos: Video[] }) {
+  const [detailVideoId, setDetailVideoId] = useState<string | null>(null)
+  const detailVideo = videos.find(video => video.id === detailVideoId)
+
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_430px]">
+    <>
       <section className="rounded-lg border bg-card">
         <div className="flex items-center justify-between gap-3 border-b p-4">
           <div>
@@ -68,12 +65,12 @@ export function VideosView({
               key={video.id}
               className={cn(
                 'flex items-start gap-3 px-4 py-4 transition hover:bg-muted/50',
-                selectedVideo.id === video.id && 'bg-muted/60',
+                detailVideoId === video.id && 'bg-muted/60',
               )}
             >
               <button
                 type="button"
-                onClick={() => onSelectVideo(video.id)}
+                onClick={() => setDetailVideoId(video.id)}
                 className="flex min-w-0 flex-1 flex-col gap-3 text-left"
               >
                 <span className="flex items-center gap-2 font-semibold">
@@ -99,12 +96,14 @@ export function VideosView({
         </div>
       </section>
 
-      <VideoDetail video={selectedVideo} />
-    </div>
+      {detailVideo ? (
+        <VideoDetailModal video={detailVideo} onClose={() => setDetailVideoId(null)} />
+      ) : null}
+    </>
   )
 }
 
-function VideoDetail({ video }: { video: Video }) {
+function VideoDetailModal({ video, onClose }: { video: Video; onClose: () => void }) {
   const [publishOpen, setPublishOpen] = useState(false)
   const finalVideoUrl = video.editingJob?.finalPath
     ? `${apiBaseUrl}${video.editingJob.finalPath}`
@@ -146,174 +145,258 @@ function VideoDetail({ video }: { video: Video }) {
   }
 
   return (
-    <aside className="rounded-lg border bg-card">
-      <div className="border-b p-4">
-        <p className="text-sm font-medium text-muted-foreground">Video</p>
-        <h2 className="mt-1 text-xl font-semibold tracking-tight">{video.title}</h2>
-      </div>
-
-      <div className="divide-y">
-        <DetailBlock title="Idea">{video.idea}</DetailBlock>
-        <DetailBlock title="Transcript">{video.transcript}</DetailBlock>
-        <DetailBlock title="Recording">
-          {video.recordings.length > 0 ? (
-            <ul className="space-y-2">
-              {video.recordings.map(recording => (
-                <li key={recording.id} className="space-y-2 rounded-md border bg-background p-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <Mic2 className="size-4 shrink-0 text-muted-foreground" />
-                      <span className="truncate">{recording.label}</span>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      disabled={deleteRecording.isPending}
-                      onClick={() => deleteRecording.mutate(recording.id)}
-                      aria-label={`Delete ${recording.label}`}
-                    >
-                      <Trash2 />
-                    </Button>
-                  </div>
-                  {recording.storagePath && (
-                    <div className="mx-auto w-full max-w-[220px] overflow-hidden rounded-md bg-black">
-                      <video
-                        src={`${apiBaseUrl}${recording.storagePath}`}
-                        className="aspect-[9/16] w-full object-cover"
-                        controls
-                        playsInline
-                        preload="metadata"
-                      />
-                    </div>
-                  )}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            'No takes yet'
-          )}
-        </DetailBlock>
-        <DetailBlock title="Final edit">
-          {video.editingJob?.status === 'ready' && finalVideoUrl ? (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm font-medium text-emerald-700">
-                <Film className="size-4" />
-                Rendered MP4 ready
-              </div>
-              <div className="mx-auto w-full max-w-[260px] overflow-hidden rounded-md bg-black">
-                <video
-                  src={finalVideoUrl}
-                  className="aspect-[9/16] w-full object-cover"
-                  controls
-                  playsInline
-                  preload="metadata"
-                />
-              </div>
-            </div>
-          ) : video.editingJob?.status === 'failed' ? (
-            <span className="text-destructive">
-              {video.editingJob.errorMessage || 'Render failed'}
-            </span>
-          ) : video.editingJob?.status === 'processing' ? (
-            'Rendering final MP4'
-          ) : video.editingJob?.status === 'queued' ? (
-            'Final edit queued'
-          ) : (
-            'No final edit yet'
-          )}
-        </DetailBlock>
-        <DetailBlock title="Editing">
-          <div className="space-y-2">
-            {video.editing.map(item => (
-              <div key={item.label} className="flex items-center gap-2">
-                <span
-                  className={cn(
-                    'flex size-5 items-center justify-center rounded border',
-                    item.done && 'border-emerald-600 bg-emerald-600 text-white',
-                  )}
-                >
-                  {item.done && <Check className="size-3.5" />}
-                </span>
-                {item.label}
-              </div>
-            ))}
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4" onClick={onClose}>
+      <div
+        className="relative flex max-h-[min(90vh,900px)] w-full max-w-2xl flex-col overflow-hidden rounded-lg border bg-card shadow-lg"
+        onClick={event => event.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="video-detail-title"
+      >
+        <div className="flex items-start justify-between gap-3 border-b p-4">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-muted-foreground">Video</p>
+            <h2 id="video-detail-title" className="mt-1 text-xl font-semibold tracking-tight">
+              {video.title}
+            </h2>
           </div>
-        </DetailBlock>
-        <DetailBlock title="Preview">{video.preview}</DetailBlock>
-        <DetailBlock title="Publish">{video.publish}</DetailBlock>
-      </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            onClick={onClose}
+            aria-label="Close video details"
+          >
+            <X />
+          </Button>
+        </div>
 
-      <div className="flex flex-wrap gap-2 border-t p-4">
-        <Link
-          to="/videos/$videoId/script"
-          params={{ videoId: video.id }}
-          className={buttonVariants({ variant: 'outline' })}
-        >
-          <FileText />
-          Script
-        </Link>
-        <Link
-          to="/videos/$videoId/record"
-          params={{ videoId: video.id }}
-          className={buttonVariants({ variant: 'outline' })}
-        >
-          <Mic2 />
-          Record
-        </Link>
-        <Button type="button" variant="outline">
-          <Check />
-          Validate
-        </Button>
-        <Button type="button" disabled={!finalVideoUrl} onClick={() => setPublishOpen(true)}>
-          <Send />
-          Publish
-        </Button>
-      </div>
-
-      {publishOpen && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4">
-          <div className="w-full max-w-md rounded-lg border bg-card shadow-lg">
-            <div className="flex items-center justify-between gap-3 border-b p-4">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Publish</p>
-                <h3 className="text-lg font-semibold">Preview final MP4</h3>
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="divide-y">
+            <DetailBlock title="Idea">{video.idea}</DetailBlock>
+            <DetailBlock title="Transcript">{video.transcript}</DetailBlock>
+            <DetailBlock title="Recording">
+              <RecordingTakes
+                videoId={video.id}
+                recordings={video.recordings}
+                deleteRecording={deleteRecording}
+              />
+            </DetailBlock>
+            <DetailBlock title="Final edit">
+              {video.editingJob?.status === 'ready' && finalVideoUrl ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm font-medium text-emerald-700">
+                    <Film className="size-4" />
+                    Rendered MP4 ready
+                  </div>
+                  <div className="mx-auto w-full max-w-[260px] overflow-hidden rounded-md bg-black">
+                    <video
+                      src={finalVideoUrl}
+                      className="aspect-[9/16] w-full object-cover"
+                      controls
+                      playsInline
+                      preload="metadata"
+                    />
+                  </div>
+                </div>
+              ) : video.editingJob?.status === 'failed' ? (
+                <span className="text-destructive">
+                  {video.editingJob.errorMessage || 'Render failed'}
+                </span>
+              ) : video.editingJob?.status === 'processing' ? (
+                'Rendering final MP4'
+              ) : video.editingJob?.status === 'queued' ? (
+                'Final edit queued'
+              ) : (
+                'No final edit yet'
+              )}
+            </DetailBlock>
+            <DetailBlock title="Editing">
+              <div className="space-y-2">
+                {video.editing.map(item => (
+                  <div key={item.label} className="flex items-center gap-2">
+                    <span
+                      className={cn(
+                        'flex size-5 items-center justify-center rounded border',
+                        item.done && 'border-emerald-600 bg-emerald-600 text-white',
+                      )}
+                    >
+                      {item.done && <Check className="size-3.5" />}
+                    </span>
+                    {item.label}
+                  </div>
+                ))}
               </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                onClick={() => setPublishOpen(false)}
-                aria-label="Close publish preview"
-              >
-                <X />
-              </Button>
-            </div>
-
-            <div className="space-y-4 p-4">
-              <div className="mx-auto w-full max-w-[260px] overflow-hidden rounded-md bg-black">
-                <video
-                  src={finalVideoUrl}
-                  className="aspect-[9/16] w-full object-cover"
-                  controls
-                  playsInline
-                  preload="metadata"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setPublishOpen(false)}>
-                  Close
-                </Button>
-                <Button type="button" onClick={downloadFinalVideo}>
-                  <Download />
-                  Download MP4
-                </Button>
-              </div>
-            </div>
+            </DetailBlock>
           </div>
         </div>
-      )}
-    </aside>
+
+        <div className="flex flex-wrap gap-2 border-t p-4">
+          <Link
+            to="/videos/$videoId/script"
+            params={{ videoId: video.id }}
+            className={buttonVariants({ variant: 'outline' })}
+          >
+            <FileText />
+            Script
+          </Link>
+          <Link
+            to="/videos/$videoId/record"
+            params={{ videoId: video.id }}
+            className={buttonVariants({ variant: 'outline' })}
+          >
+            <Mic2 />
+            Record
+          </Link>
+          <Button type="button" variant="outline">
+            <Check />
+            Validate
+          </Button>
+          <Button type="button" disabled={!finalVideoUrl} onClick={() => setPublishOpen(true)}>
+            <Send />
+            Publish
+          </Button>
+        </div>
+
+        {publishOpen ? (
+          <div
+            className="absolute inset-0 z-10 grid place-items-center rounded-lg bg-black/60 p-4"
+            onClick={() => setPublishOpen(false)}
+          >
+            <div
+              className="w-full max-w-md rounded-lg border bg-card shadow-lg"
+              onClick={event => event.stopPropagation()}
+            >
+              <div className="flex items-center justify-between gap-3 border-b p-4">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Publish</p>
+                  <h3 className="text-lg font-semibold">Preview final MP4</h3>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => setPublishOpen(false)}
+                  aria-label="Close publish preview"
+                >
+                  <X />
+                </Button>
+              </div>
+
+              <div className="space-y-4 p-4">
+                <div className="mx-auto w-full max-w-[260px] overflow-hidden rounded-md bg-black">
+                  <video
+                    src={finalVideoUrl}
+                    className="aspect-[9/16] w-full object-cover"
+                    controls
+                    playsInline
+                    preload="metadata"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={() => setPublishOpen(false)}>
+                    Close
+                  </Button>
+                  <Button type="button" onClick={downloadFinalVideo}>
+                    <Download />
+                    Download MP4
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  )
+}
+
+function RecordingTakes({
+  videoId,
+  recordings,
+  deleteRecording,
+}: {
+  videoId: string
+  recordings: Video['recordings']
+  deleteRecording: { isPending: boolean; mutate: (recordingId: string) => void }
+}) {
+  const [index, setIndex] = useState(0)
+
+  useEffect(() => {
+    setIndex(0)
+  }, [videoId])
+
+  useEffect(() => {
+    if (index >= recordings.length) {
+      setIndex(Math.max(0, recordings.length - 1))
+    }
+  }, [index, recordings.length])
+
+  if (recordings.length === 0) {
+    return 'No takes yet'
+  }
+
+  const recording = recordings[index]
+  const hasMultiple = recordings.length > 1
+
+  return (
+    <div className="space-y-2 rounded-md border bg-background p-2">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          {hasMultiple ? (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                disabled={index === 0}
+                onClick={() => setIndex(current => current - 1)}
+                aria-label="Previous recording"
+              >
+                <ChevronLeft />
+              </Button>
+              <span className="text-sm text-muted-foreground tabular-nums">
+                {index + 1} / {recordings.length}
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                disabled={index === recordings.length - 1}
+                onClick={() => setIndex(current => current + 1)}
+                aria-label="Next recording"
+              >
+                <ChevronRight />
+              </Button>
+            </>
+          ) : null}
+          <Mic2 className="size-4 shrink-0 text-muted-foreground" />
+          <span className="truncate">{recording.label}</span>
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          disabled={deleteRecording.isPending}
+          onClick={() => deleteRecording.mutate(recording.id)}
+          aria-label={`Delete ${recording.label}`}
+        >
+          <Trash2 />
+        </Button>
+      </div>
+      {recording.storagePath ? (
+        <div className="mx-auto w-full max-w-[220px] overflow-hidden rounded-md bg-black">
+          <video
+            key={recording.id}
+            src={`${apiBaseUrl}${recording.storagePath}`}
+            className="aspect-[9/16] w-full object-cover"
+            controls
+            playsInline
+            preload="metadata"
+          />
+        </div>
+      ) : null}
+    </div>
   )
 }

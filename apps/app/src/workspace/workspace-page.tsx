@@ -20,7 +20,6 @@ export function WorkspacePage() {
 
   const [activeTab, setActiveTab] = useState<WorkspaceTab>(() => tabFromHash())
   const [selectedIdeaId, setSelectedIdeaId] = useState(workspace.ideas[0]?.id ?? '')
-  const [selectedVideoId, setSelectedVideoId] = useState(workspace.videos[1]?.id ?? '')
   const [selectedBrandSectionId, setSelectedBrandSectionId] = useState(
     workspace.brandBrain[1]?.id ?? '',
   )
@@ -36,21 +35,14 @@ export function WorkspacePage() {
     if (!workspace.ideas.some(idea => idea.id === selectedIdeaId)) {
       setSelectedIdeaId(workspace.ideas[0]?.id ?? '')
     }
-    if (!workspace.videos.some(video => video.id === selectedVideoId)) {
-      setSelectedVideoId(workspace.videos[0]?.id ?? '')
-    }
     if (!workspace.brandBrain.some(section => section.id === selectedBrandSectionId)) {
       setSelectedBrandSectionId(workspace.brandBrain[0]?.id ?? '')
     }
-  }, [selectedBrandSectionId, selectedIdeaId, selectedVideoId, workspace])
+  }, [selectedBrandSectionId, selectedIdeaId, workspace])
 
   const selectedIdea = useMemo(
     () => workspace.ideas.find(idea => idea.id === selectedIdeaId) ?? workspace.ideas[0],
     [selectedIdeaId, workspace.ideas],
-  )
-  const selectedVideo = useMemo(
-    () => workspace.videos.find(video => video.id === selectedVideoId) ?? workspace.videos[0],
-    [selectedVideoId, workspace.videos],
   )
   const selectedBrandSection = useMemo(
     () =>
@@ -64,7 +56,7 @@ export function WorkspacePage() {
     window.history.replaceState(null, '', `#${tabHashes[tab]}`)
   }
 
-  if (!selectedIdea || !selectedVideo || !selectedBrandSection) {
+  if (!selectedIdea || workspace.videos.length === 0 || !selectedBrandSection) {
     return <EmptyWorkspace />
   }
 
@@ -100,13 +92,7 @@ export function WorkspacePage() {
             onSelectIdea={setSelectedIdeaId}
           />
         )}
-        {activeTab === 'videos' && (
-          <VideosView
-            videos={workspace.videos}
-            selectedVideo={selectedVideo}
-            onSelectVideo={setSelectedVideoId}
-          />
-        )}
+        {activeTab === 'videos' && <VideosView videos={workspace.videos} />}
         {activeTab === 'brand' && (
           <BrandBrainView
             sections={workspace.brandBrain}
