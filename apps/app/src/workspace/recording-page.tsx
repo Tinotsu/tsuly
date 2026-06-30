@@ -110,6 +110,7 @@ function Recorder({ video }: { video: Video }) {
   const [mirrorMode, setMirrorMode] = useState(true)
   const [lineHighlight, setLineHighlight] = useState(true)
   const [cameraOverlaySize, setCameraOverlaySize] = useState(26)
+  const [cameraOverlayPosition, setCameraOverlayPosition] = useState({ x: 50, y: 78 })
   const [screenZoom, setScreenZoom] = useState(1)
   const [manualLine, setManualLine] = useState(0)
   const [manualOverride, setManualOverride] = useState(false)
@@ -128,6 +129,11 @@ function Recorder({ video }: { video: Video }) {
   )
   const currentLine = manualOverride ? manualLine : autoLine
   const durationSeconds = take ? Math.max(0.1, take.durationMs / 1000) : 1
+  const cameraOverlayRatio =
+    previewRef.current?.videoWidth && previewRef.current.videoHeight
+      ? previewRef.current.videoWidth / previewRef.current.videoHeight
+      : 9 / 16
+  const cameraOverlayWidth = cameraOverlaySize * cameraOverlayRatio * (16 / 9)
   const canUpload =
     take &&
     trimStartSeconds >= 0 &&
@@ -228,8 +234,12 @@ function Recorder({ video }: { video: Video }) {
         const cameraWidth = Math.round(
           cameraHeight * (drawingCameraVideo.videoWidth / drawingCameraVideo.videoHeight),
         )
-        const cameraX = Math.round((drawingCanvas.width - cameraWidth) / 2)
-        const cameraY = Math.round(drawingCanvas.height - cameraHeight - 90)
+        const cameraX = Math.round(
+          (drawingCanvas.width * cameraOverlayPosition.x) / 100 - cameraWidth / 2,
+        )
+        const cameraY = Math.round(
+          (drawingCanvas.height * cameraOverlayPosition.y) / 100 - cameraHeight / 2,
+        )
 
         const personCanvas = personCanvasRef.current
         if (cameraCutoutMode && segmentationReady && personCanvas) {
@@ -266,7 +276,15 @@ function Recorder({ video }: { video: Video }) {
     drawFrame()
 
     return () => window.cancelAnimationFrame(animationFrame)
-  }, [cameraCutoutMode, cameraOverlaySize, mirrorMode, screenReady, screenZoom, segmentationReady])
+  }, [
+    cameraCutoutMode,
+    cameraOverlayPosition,
+    cameraOverlaySize,
+    mirrorMode,
+    screenReady,
+    screenZoom,
+    segmentationReady,
+  ])
 
   useEffect(() => {
     if (!detachedPrompterWindow) return
@@ -632,6 +650,27 @@ function Recorder({ video }: { video: Video }) {
     return Math.max(0, Date.now() - startMsRef.current - pausedMsRef.current - pausedNow)
   }
 
+  function moveCameraOverlay(event: React.PointerEvent<HTMLCanvasElement>) {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const bounds = canvas.getBoundingClientRect()
+    setCameraOverlayPosition({
+      x: Math.min(95, Math.max(5, ((event.clientX - bounds.left) / bounds.width) * 100)),
+      y: Math.min(95, Math.max(5, ((event.clientY - bounds.top) / bounds.height) * 100)),
+    })
+  }
+
+  function resizeCameraOverlay(event: React.PointerEvent<HTMLDivElement>) {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const bounds = canvas.getBoundingClientRect()
+    const centerY = bounds.top + (bounds.height * cameraOverlayPosition.y) / 100
+    const nextSize = (((event.clientY - centerY) * 2) / bounds.height) * 100
+    setCameraOverlaySize(Math.min(46, Math.max(14, nextSize)))
+  }
+
   return (
     <main className="min-h-[calc(100svh-4rem)] bg-[#f6f7f5] text-[#171812]">
       <div className="mx-auto grid min-h-[calc(100svh-4rem)] w-full max-w-7xl gap-4 px-3 py-3 sm:px-6 lg:grid-cols-[270px_minmax(0,1fr)_300px] lg:px-8">
@@ -659,10 +698,17 @@ function Recorder({ video }: { video: Video }) {
           screenZoom={screenZoom}
           onScreenModeChange={value => {
             setScreenMode(value)
-            if (value) void requestScreen()
-            else stopScreenStream()
+            if (value) {
+              if (detachedPrompterMode !== 'video') void toggleDetachedPrompter('video')
+              void requestScreen()
+            } else {
+              stopScreenStream()
+            }
           }}
-          onSelectScreen={() => void requestScreen()}
+          onSelectScreen={() => {
+            if (detachedPrompterMode !== 'video') void toggleDetachedPrompter('video')
+            void requestScreen()
+          }}
           onCameraCutoutModeChange={value => {
             setCameraCutoutMode(value)
             if (value) void ensureSegmenter()
@@ -703,7 +749,44 @@ function Recorder({ video }: { video: Video }) {
                 preload="auto"
               />
             ) : screenMode && screenReady ? (
-              <canvas ref={canvasRef} className="size-full" />
+              <>
+                <canvas
+                  ref={canvasRef}
+                  className="size-full cursor-grab active:cursor-grabbing"
+                  onPointerDown={event => {
+                    event.currentTarget.setPointerCapture(event.pointerId)
+                    moveCameraOverlay(event)
+                  }}
+                  onPointerMove={event => {
+                    if (event.currentTarget.hasPointerCapture(event.pointerId))
+                      moveCameraOverlay(event)
+                  }}
+                  onPointerUp={event => event.currentTarget.releasePointerCapture(event.pointerId)}
+                />
+                <div
+                  className="absolute size-5 cursor-nwse-resize rounded-full border-2 border-white bg-black/45 shadow"
+                  style={{
+                    left: `${cameraOverlayPosition.x + cameraOverlayWidth / 2}%`,
+                    top: `${cameraOverlayPosition.y + cameraOverlaySize / 2}%`,
+                    transform: 'translate(-50%, -50%)',
+                  }}
+                  onClick={event => event.stopPropagation()}
+                  onPointerDown={event => {
+                    event.stopPropagation()
+                    event.currentTarget.setPointerCapture(event.pointerId)
+                    resizeCameraOverlay(event)
+                  }}
+                  onPointerMove={event => {
+                    event.stopPropagation()
+                    if (event.currentTarget.hasPointerCapture(event.pointerId))
+                      resizeCameraOverlay(event)
+                  }}
+                  onPointerUp={event => {
+                    event.stopPropagation()
+                    event.currentTarget.releasePointerCapture(event.pointerId)
+                  }}
+                />
+              </>
             ) : (
               <video
                 ref={previewRef}
