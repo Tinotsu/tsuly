@@ -1,5 +1,6 @@
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
+import { FilesetResolver, ImageSegmenter, type ImageSegmenterResult } from '@mediapipe/tasks-vision'
 import {
   ArrowLeft,
   Check,
@@ -9,6 +10,7 @@ import {
   Play,
   RefreshCcw,
   RotateCcw,
+  ScreenShare,
   Square,
   Upload,
 } from 'lucide-react'
@@ -39,6 +41,9 @@ type DocumentPictureInPictureApi = {
 type DetachedPrompterMode = 'prompter' | 'video'
 
 const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3333'
+const mediaPipeWasmUrl = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm'
+const selfieSegmenterModelUrl =
+  'https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite'
 
 export function RecordingPage({ videoId }: { videoId: string }) {
   const { data: workspace } = useSuspenseQuery(
@@ -65,14 +70,22 @@ export function RecordingPage({ videoId }: { videoId: string }) {
 
 function Recorder({ video }: { video: Video }) {
   const previewRef = useRef<HTMLVideoElement | null>(null)
+  const screenPreviewRef = useRef<HTMLVideoElement | null>(null)
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const personCanvasRef = useRef<HTMLCanvasElement | null>(null)
+  const personMaskCanvasRef = useRef<HTMLCanvasElement | null>(null)
+  const segmenterRef = useRef<ImageSegmenter | null>(null)
   const recorderRef = useRef<MediaRecorder | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
+  const screenStreamRef = useRef<MediaStream | null>(null)
   const chunksRef = useRef<Blob[]>([])
   const takeUrlRef = useRef('')
   const startedAtRef = useRef('')
   const startMsRef = useRef(0)
   const pausedAtRef = useRef(0)
   const pausedMsRef = useRef(0)
+  const lastSegmentationMsRef = useRef(0)
+  const personMaskIndexRef = useRef(1)
 
   const promptLines = useMemo(
     () => buildPromptLines(video.script.spokenScript),
@@ -81,6 +94,12 @@ function Recorder({ video }: { video: Video }) {
   const [phase, setPhase] = useState<RecorderPhase>('idle')
   const [permissionError, setPermissionError] = useState('')
   const [cameraReady, setCameraReady] = useState(false)
+  const [screenMode, setScreenMode] = useState(false)
+  const [screenReady, setScreenReady] = useState(false)
+  const [screenError, setScreenError] = useState('')
+  const [cameraCutoutMode, setCameraCutoutMode] = useState(true)
+  const [segmentationReady, setSegmentationReady] = useState(false)
+  const [segmentationError, setSegmentationError] = useState('')
   const [uploadError, setUploadError] = useState('')
   const [take, setTake] = useState<RecordedTake | null>(null)
   const [countdownSeconds, setCountdownSeconds] = useState(3)
@@ -90,6 +109,8 @@ function Recorder({ video }: { video: Video }) {
   const [scrollSpeed, setScrollSpeed] = useState(1)
   const [mirrorMode, setMirrorMode] = useState(true)
   const [lineHighlight, setLineHighlight] = useState(true)
+  const [cameraOverlaySize, setCameraOverlaySize] = useState(26)
+  const [screenZoom, setScreenZoom] = useState(1)
   const [manualLine, setManualLine] = useState(0)
   const [manualOverride, setManualOverride] = useState(false)
   const [promptPosition, setPromptPosition] = useState({ x: 50, y: 12 })
@@ -112,12 +133,18 @@ function Recorder({ video }: { video: Video }) {
     trimStartSeconds >= 0 &&
     trimEndSeconds > trimStartSeconds &&
     trimEndSeconds <= durationSeconds
+  const recordingDisabled =
+    !cameraReady ||
+    Boolean(permissionError) ||
+    (screenMode && (!screenReady || Boolean(screenError)))
 
   useEffect(() => {
     void requestCamera()
 
     return () => {
       stopStream()
+      stopScreenStream()
+      segmenterRef.current?.close()
       if (takeUrlRef.current) URL.revokeObjectURL(takeUrlRef.current)
     }
   }, [])
@@ -146,7 +173,100 @@ function Recorder({ video }: { video: Video }) {
 
     previewRef.current.srcObject = streamRef.current
     void previewRef.current.play()
-  }, [phase])
+  }, [phase, screenMode, screenReady])
+
+  useEffect(() => {
+    if (!screenReady) return
+    if (cameraCutoutMode) void ensureSegmenter()
+
+    const canvas = canvasRef.current
+    const screenVideo = screenPreviewRef.current
+    const cameraVideo = previewRef.current
+    if (!canvas || !screenVideo || !cameraVideo) return
+    const context = canvas.getContext('2d')
+    if (!context) return
+    const drawingCanvas = canvas
+    const drawingScreenVideo = screenVideo
+    const drawingCameraVideo = cameraVideo
+    const drawingContext = context
+
+    drawingCanvas.width = 1080
+    drawingCanvas.height = 1920
+
+    let animationFrame = 0
+
+    function drawFrame() {
+      const screenWidth = drawingScreenVideo.videoWidth || drawingCanvas.width
+      const screenHeight = drawingScreenVideo.videoHeight || drawingCanvas.height
+      const screenScale =
+        Math.max(drawingCanvas.width / screenWidth, drawingCanvas.height / screenHeight) *
+        screenZoom
+      const screenDrawWidth = screenWidth * screenScale
+      const screenDrawHeight = screenHeight * screenScale
+      const screenX = (drawingCanvas.width - screenDrawWidth) / 2
+      const screenY = (drawingCanvas.height - screenDrawHeight) / 2
+
+      drawingContext.fillStyle = '#000'
+      drawingContext.fillRect(0, 0, drawingCanvas.width, drawingCanvas.height)
+      drawingContext.drawImage(
+        drawingScreenVideo,
+        screenX,
+        screenY,
+        screenDrawWidth,
+        screenDrawHeight,
+      )
+
+      if (drawingCameraVideo.videoWidth && drawingCameraVideo.videoHeight) {
+        if (
+          cameraCutoutMode &&
+          segmenterRef.current &&
+          drawingCameraVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA
+        ) {
+          updatePersonCutout(drawingCameraVideo)
+        }
+        const cameraHeight = Math.round((drawingCanvas.height * cameraOverlaySize) / 100)
+        const cameraWidth = Math.round(
+          cameraHeight * (drawingCameraVideo.videoWidth / drawingCameraVideo.videoHeight),
+        )
+        const cameraX = Math.round((drawingCanvas.width - cameraWidth) / 2)
+        const cameraY = Math.round(drawingCanvas.height - cameraHeight - 90)
+
+        const personCanvas = personCanvasRef.current
+        if (cameraCutoutMode && segmentationReady && personCanvas) {
+          drawCameraLayer(
+            drawingContext,
+            personCanvas,
+            cameraX,
+            cameraY,
+            cameraWidth,
+            cameraHeight,
+            mirrorMode,
+          )
+        } else {
+          drawingContext.save()
+          drawingContext.beginPath()
+          drawingContext.roundRect(cameraX, cameraY, cameraWidth, cameraHeight, 36)
+          drawingContext.clip()
+          drawCameraLayer(
+            drawingContext,
+            drawingCameraVideo,
+            cameraX,
+            cameraY,
+            cameraWidth,
+            cameraHeight,
+            mirrorMode,
+          )
+          drawingContext.restore()
+        }
+      }
+
+      animationFrame = window.requestAnimationFrame(drawFrame)
+    }
+
+    drawFrame()
+
+    return () => window.cancelAnimationFrame(animationFrame)
+  }, [cameraCutoutMode, cameraOverlaySize, mirrorMode, screenReady, screenZoom, segmentationReady])
 
   useEffect(() => {
     if (!detachedPrompterWindow) return
@@ -200,6 +320,125 @@ function Recorder({ video }: { video: Video }) {
     if (previewRef.current) previewRef.current.srcObject = null
   }
 
+  async function requestScreen() {
+    setScreenError('')
+
+    if (!navigator.mediaDevices?.getDisplayMedia) {
+      setScreenError('This browser cannot record your screen.')
+      return
+    }
+
+    try {
+      stopScreenStream()
+      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
+      screenStreamRef.current = stream
+      if (screenPreviewRef.current) {
+        screenPreviewRef.current.srcObject = stream
+        await screenPreviewRef.current.play()
+      }
+      stream.getVideoTracks()[0]?.addEventListener('ended', () => {
+        screenStreamRef.current = null
+        setScreenReady(false)
+        setScreenError('Screen sharing stopped.')
+      })
+      setScreenReady(true)
+    } catch {
+      setScreenReady(false)
+      setScreenError('Screen selection was cancelled.')
+    }
+  }
+
+  function stopScreenStream() {
+    screenStreamRef.current?.getTracks().forEach(track => track.stop())
+    screenStreamRef.current = null
+    setScreenReady(false)
+    if (screenPreviewRef.current) screenPreviewRef.current.srcObject = null
+  }
+
+  async function ensureSegmenter() {
+    if (segmenterRef.current) {
+      setSegmentationReady(true)
+      return
+    }
+
+    try {
+      setSegmentationError('')
+      const vision = await FilesetResolver.forVisionTasks(mediaPipeWasmUrl)
+      const segmenter = await ImageSegmenter.createFromOptions(vision, {
+        baseOptions: {
+          modelAssetPath: selfieSegmenterModelUrl,
+          delegate: 'CPU',
+        },
+        outputConfidenceMasks: true,
+        outputCategoryMask: false,
+        runningMode: 'VIDEO',
+      })
+      const personIndex = segmenter
+        .getLabels()
+        .findIndex(label => label.toLowerCase().includes('person'))
+
+      personMaskIndexRef.current = personIndex === -1 ? 1 : personIndex
+      segmenterRef.current = segmenter
+      setSegmentationReady(true)
+    } catch {
+      setSegmentationReady(false)
+      setSegmentationError('Cutout could not load. Recording still works without it.')
+    }
+  }
+
+  function updatePersonCutout(cameraVideo: HTMLVideoElement) {
+    const segmenter = segmenterRef.current
+    const now = performance.now()
+    if (!segmenter || now - lastSegmentationMsRef.current < 100) return
+
+    try {
+      const result = segmenter.segmentForVideo(cameraVideo, now)
+      drawPersonCutout(result, cameraVideo)
+      result.confidenceMasks?.forEach(mask => mask.close())
+      result.categoryMask?.close()
+      lastSegmentationMsRef.current = now
+    } catch {
+      segmenter.close()
+      segmenterRef.current = null
+      setSegmentationReady(false)
+      setSegmentationError('Cutout stopped. Recording still works without it.')
+    }
+  }
+
+  function drawPersonCutout(result: ImageSegmenterResult, cameraVideo: HTMLVideoElement) {
+    const masks = result.confidenceMasks
+    const mask = masks?.[personMaskIndexRef.current] ?? masks?.[masks.length - 1]
+    if (!mask) return
+
+    const width = mask.width
+    const height = mask.height
+    const personCanvas = personCanvasRef.current ?? document.createElement('canvas')
+    const maskCanvas = personMaskCanvasRef.current ?? document.createElement('canvas')
+    const personContext = personCanvas.getContext('2d')
+    const maskContext = maskCanvas.getContext('2d')
+    if (!personContext || !maskContext) return
+
+    personCanvasRef.current = personCanvas
+    personMaskCanvasRef.current = maskCanvas
+    personCanvas.width = width
+    personCanvas.height = height
+    maskCanvas.width = width
+    maskCanvas.height = height
+
+    const maskData = mask.getAsFloat32Array()
+    const imageData = maskContext.createImageData(width, height)
+    for (let index = 0; index < maskData.length; index += 1) {
+      imageData.data[index * 4 + 3] = Math.round(maskData[index] * 255)
+    }
+
+    maskContext.putImageData(imageData, 0, 0)
+    personContext.clearRect(0, 0, width, height)
+    personContext.drawImage(maskCanvas, 0, 0)
+    personContext.globalCompositeOperation = 'source-in'
+    personContext.drawImage(cameraVideo, 0, 0, width, height)
+    personContext.globalCompositeOperation = 'source-over'
+  }
+
   function startCountdown() {
     setUploadError('')
     setManualOverride(false)
@@ -211,14 +450,24 @@ function Recorder({ video }: { video: Video }) {
   }
 
   function beginRecording() {
-    const stream = streamRef.current
-    if (!stream) {
+    const cameraStream = streamRef.current
+    if (!cameraStream) {
       setPermissionError('Camera is not ready.')
       return
     }
+    let recordingStream = cameraStream
+    if (screenMode) {
+      if (!screenStreamRef.current || !canvasRef.current) {
+        setScreenError('Choose a screen or window first.')
+        return
+      }
+      recordingStream = canvasRef.current.captureStream(30)
+      cameraStream.getAudioTracks().forEach(track => recordingStream.addTrack(track))
+      screenStreamRef.current.getAudioTracks().forEach(track => recordingStream.addTrack(track))
+    }
 
     const mimeType = recorderMimeType()
-    const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined)
+    const recorder = new MediaRecorder(recordingStream, mimeType ? { mimeType } : undefined)
     chunksRef.current = []
     startedAtRef.current = new Date().toISOString()
     startMsRef.current = Date.now()
@@ -400,6 +649,26 @@ function Recorder({ video }: { video: Video }) {
           onScrollSpeedChange={setScrollSpeed}
           onMirrorModeChange={setMirrorMode}
           onLineHighlightChange={setLineHighlight}
+          screenMode={screenMode}
+          screenReady={screenReady}
+          screenError={screenError}
+          cameraCutoutMode={cameraCutoutMode}
+          segmentationReady={segmentationReady}
+          segmentationError={segmentationError}
+          cameraOverlaySize={cameraOverlaySize}
+          screenZoom={screenZoom}
+          onScreenModeChange={value => {
+            setScreenMode(value)
+            if (value) void requestScreen()
+            else stopScreenStream()
+          }}
+          onSelectScreen={() => void requestScreen()}
+          onCameraCutoutModeChange={value => {
+            setCameraCutoutMode(value)
+            if (value) void ensureSegmenter()
+          }}
+          onCameraOverlaySizeChange={setCameraOverlaySize}
+          onScreenZoomChange={setScreenZoom}
           onManualLineChange={value => {
             setManualOverride(true)
             setManualLine(value)
@@ -407,7 +676,7 @@ function Recorder({ video }: { video: Video }) {
           onAutoScroll={() => setManualOverride(false)}
           detachedPrompterMode={detachedPrompterMode}
           detachPrompterError={detachPrompterError}
-          videoDetachDisabled={!cameraReady || Boolean(permissionError)}
+          videoDetachDisabled={recordingDisabled}
           onToggleDetachedPrompter={mode => void toggleDetachedPrompter(mode)}
           videoId={video.id}
         />
@@ -433,6 +702,8 @@ function Recorder({ video }: { video: Video }) {
                 playsInline
                 preload="auto"
               />
+            ) : screenMode && screenReady ? (
+              <canvas ref={canvasRef} className="size-full" />
             ) : (
               <video
                 ref={previewRef}
@@ -442,6 +713,10 @@ function Recorder({ video }: { video: Video }) {
                 autoPlay
               />
             )}
+            {screenMode && screenReady && (
+              <video ref={previewRef} className="hidden" muted playsInline autoPlay />
+            )}
+            <video ref={screenPreviewRef} className="hidden" muted playsInline autoPlay />
 
             {phase === 'countdown' && (
               <div className="absolute inset-0 grid place-items-center bg-black/40 text-7xl font-semibold text-white">
@@ -483,7 +758,7 @@ function Recorder({ video }: { video: Video }) {
 
           <RecorderControls
             phase={phase}
-            disabled={!cameraReady || Boolean(permissionError)}
+            disabled={recordingDisabled}
             uploadDisabled={!canUpload}
             recordedMs={recordedMs}
             onStart={startCountdown}
@@ -549,6 +824,14 @@ function TeleprompterControls({
   scrollSpeed,
   mirrorMode,
   lineHighlight,
+  screenMode,
+  screenReady,
+  screenError,
+  cameraCutoutMode,
+  segmentationReady,
+  segmentationError,
+  cameraOverlaySize,
+  screenZoom,
   currentLine,
   lineCount,
   disabled,
@@ -557,6 +840,11 @@ function TeleprompterControls({
   onScrollSpeedChange,
   onMirrorModeChange,
   onLineHighlightChange,
+  onScreenModeChange,
+  onSelectScreen,
+  onCameraCutoutModeChange,
+  onCameraOverlaySizeChange,
+  onScreenZoomChange,
   onManualLineChange,
   onAutoScroll,
   detachedPrompterMode,
@@ -570,6 +858,14 @@ function TeleprompterControls({
   scrollSpeed: number
   mirrorMode: boolean
   lineHighlight: boolean
+  screenMode: boolean
+  screenReady: boolean
+  screenError: string
+  cameraCutoutMode: boolean
+  segmentationReady: boolean
+  segmentationError: string
+  cameraOverlaySize: number
+  screenZoom: number
   currentLine: number
   lineCount: number
   disabled: boolean
@@ -578,6 +874,11 @@ function TeleprompterControls({
   onScrollSpeedChange: (value: number) => void
   onMirrorModeChange: (value: boolean) => void
   onLineHighlightChange: (value: boolean) => void
+  onScreenModeChange: (value: boolean) => void
+  onSelectScreen: () => void
+  onCameraCutoutModeChange: (value: boolean) => void
+  onCameraOverlaySizeChange: (value: number) => void
+  onScreenZoomChange: (value: number) => void
   onManualLineChange: (value: number) => void
   onAutoScroll: () => void
   detachedPrompterMode: DetachedPrompterMode | null
@@ -642,6 +943,47 @@ function TeleprompterControls({
           <RotateCcw />
           Auto scroll
         </Button>
+        <div className="space-y-3 rounded-lg border bg-muted/30 p-3">
+          <ToggleControl label="Record screen" checked={screenMode} onChange={onScreenModeChange} />
+          {screenMode && (
+            <>
+              <Button type="button" variant="outline" className="w-full" onClick={onSelectScreen}>
+                <ScreenShare />
+                {screenReady ? 'Change screen/window' : 'Choose screen/window'}
+              </Button>
+              <ToggleControl
+                label="Cut me out"
+                checked={cameraCutoutMode}
+                onChange={onCameraCutoutModeChange}
+              />
+              <RangeControl
+                label="Me size"
+                value={cameraOverlaySize}
+                min={14}
+                max={46}
+                step={1}
+                suffix="%"
+                onChange={onCameraOverlaySizeChange}
+              />
+              <RangeControl
+                label="Screen zoom"
+                value={screenZoom}
+                min={1}
+                max={2}
+                step={0.05}
+                suffix="x"
+                onChange={onScreenZoomChange}
+              />
+              {screenError && <p className="text-xs text-destructive">{screenError}</p>}
+              {cameraCutoutMode && !segmentationReady && !segmentationError && (
+                <p className="text-xs text-muted-foreground">Cutout loading</p>
+              )}
+              {cameraCutoutMode && segmentationError && (
+                <p className="text-xs text-destructive">{segmentationError}</p>
+              )}
+            </>
+          )}
+        </div>
         <Button
           type="button"
           variant="outline"
@@ -1238,6 +1580,27 @@ function ToggleControl({
       />
     </label>
   )
+}
+
+function drawCameraLayer(
+  context: CanvasRenderingContext2D,
+  image: CanvasImageSource,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  mirrorMode: boolean,
+) {
+  if (mirrorMode) {
+    context.save()
+    context.translate(x + width, y)
+    context.scale(-1, 1)
+    context.drawImage(image, 0, 0, width, height)
+    context.restore()
+    return
+  }
+
+  context.drawImage(image, x, y, width, height)
 }
 
 function buildPromptLines(spokenScript: string) {
