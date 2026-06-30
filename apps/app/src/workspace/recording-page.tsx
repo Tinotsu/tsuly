@@ -1,7 +1,19 @@
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { ArrowLeft, Check, Pause, Play, RefreshCcw, RotateCcw, Square, Upload } from 'lucide-react'
+import {
+  ArrowLeft,
+  Check,
+  PanelTopClose,
+  PanelTopOpen,
+  Pause,
+  Play,
+  RefreshCcw,
+  RotateCcw,
+  Square,
+  Upload,
+} from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,6 +32,9 @@ type RecordedTake = {
   startedAt: string
   stoppedAt: string
   durationMs: number
+}
+type DocumentPictureInPictureApi = {
+  requestWindow: (options?: { width?: number; height?: number }) => Promise<Window>
 }
 
 const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3333'
@@ -76,7 +91,9 @@ function Recorder({ video }: { video: Video }) {
   const [lineHighlight, setLineHighlight] = useState(true)
   const [manualLine, setManualLine] = useState(0)
   const [manualOverride, setManualOverride] = useState(false)
-  const [promptPosition, setPromptPosition] = useState({ x: 50, y: 22 })
+  const [promptPosition, setPromptPosition] = useState({ x: 50, y: 12 })
+  const [detachedPrompterWindow, setDetachedPrompterWindow] = useState<Window | null>(null)
+  const [detachPrompterError, setDetachPrompterError] = useState('')
   const [trimStartSeconds, setTrimStartSeconds] = useState(0)
   const [trimEndSeconds, setTrimEndSeconds] = useState(0)
 
@@ -126,6 +143,22 @@ function Recorder({ video }: { video: Video }) {
     previewRef.current.srcObject = streamRef.current
     void previewRef.current.play()
   }, [phase])
+
+  useEffect(() => {
+    if (!detachedPrompterWindow) return
+
+    const handleClose = () => setDetachedPrompterWindow(null)
+    detachedPrompterWindow.addEventListener('pagehide', handleClose)
+    return () => detachedPrompterWindow.removeEventListener('pagehide', handleClose)
+  }, [detachedPrompterWindow])
+
+  useEffect(() => {
+    if (!detachedPrompterWindow) return
+    if (['idle', 'countdown', 'recording', 'paused'].includes(phase)) return
+
+    detachedPrompterWindow.close()
+    setDetachedPrompterWindow(null)
+  }, [detachedPrompterWindow, phase])
 
   async function requestCamera() {
     setPermissionError('')
@@ -247,6 +280,38 @@ function Recorder({ video }: { video: Video }) {
     if (phase === 'paused') resumeRecording()
   }
 
+  async function toggleDetachedPrompter() {
+    if (detachedPrompterWindow) {
+      closeDetachedPrompter()
+      return
+    }
+
+    const pictureInPicture = (
+      window as Window & { documentPictureInPicture?: DocumentPictureInPictureApi }
+    ).documentPictureInPicture
+
+    if (!pictureInPicture) {
+      setDetachPrompterError('Detach prompter requires Chrome or Edge desktop.')
+      return
+    }
+
+    try {
+      const prompterWindow = await pictureInPicture.requestWindow({ width: 760, height: 260 })
+      prompterWindow.document.title = 'Tsuly prompter'
+      prompterWindow.document.body.innerHTML = ''
+      prompterWindow.document.body.style.margin = '0'
+      setDetachPrompterError('')
+      setDetachedPrompterWindow(prompterWindow)
+    } catch {
+      setDetachPrompterError('Could not detach prompter. Click the button again.')
+    }
+  }
+
+  function closeDetachedPrompter() {
+    detachedPrompterWindow?.close()
+    setDetachedPrompterWindow(null)
+  }
+
   function retake() {
     if (take) URL.revokeObjectURL(take.url)
     takeUrlRef.current = ''
@@ -327,6 +392,9 @@ function Recorder({ video }: { video: Video }) {
             setManualLine(value)
           }}
           onAutoScroll={() => setManualOverride(false)}
+          prompterDetached={Boolean(detachedPrompterWindow)}
+          detachPrompterError={detachPrompterError}
+          onToggleDetachedPrompter={() => void toggleDetachedPrompter()}
           videoId={video.id}
         />
 
@@ -367,16 +435,17 @@ function Recorder({ video }: { video: Video }) {
               </div>
             )}
 
-            {(phase === 'idle' || phase === 'recording' || phase === 'paused') && (
-              <TeleprompterOverlay
-                lines={promptLines}
-                currentLine={currentLine}
-                fontSize={fontSize}
-                lineHighlight={lineHighlight}
-                position={promptPosition}
-                onPositionChange={setPromptPosition}
-              />
-            )}
+            {!detachedPrompterWindow &&
+              (phase === 'idle' || phase === 'recording' || phase === 'paused') && (
+                <TeleprompterOverlay
+                  lines={promptLines}
+                  currentLine={currentLine}
+                  fontSize={fontSize}
+                  lineHighlight={lineHighlight}
+                  position={promptPosition}
+                  onPositionChange={setPromptPosition}
+                />
+              )}
 
             {permissionError && (
               <div className="absolute inset-x-4 top-4 rounded-lg bg-white p-4 text-sm shadow">
@@ -424,6 +493,16 @@ function Recorder({ video }: { video: Video }) {
           onTrimEndChange={setTrimEndSeconds}
         />
       </div>
+      {detachedPrompterWindow &&
+        createPortal(
+          <DetachedPrompterWindow
+            lines={promptLines}
+            currentLine={currentLine}
+            fontSize={fontSize}
+            lineHighlight={lineHighlight}
+          />,
+          detachedPrompterWindow.document.body,
+        )}
     </main>
   )
 }
@@ -444,6 +523,9 @@ function TeleprompterControls({
   onLineHighlightChange,
   onManualLineChange,
   onAutoScroll,
+  prompterDetached,
+  detachPrompterError,
+  onToggleDetachedPrompter,
   videoId,
 }: {
   countdownSeconds: number
@@ -461,6 +543,9 @@ function TeleprompterControls({
   onLineHighlightChange: (value: boolean) => void
   onManualLineChange: (value: number) => void
   onAutoScroll: () => void
+  prompterDetached: boolean
+  detachPrompterError: string
+  onToggleDetachedPrompter: () => void
   videoId: string
 }) {
   return (
@@ -516,6 +601,16 @@ function TeleprompterControls({
           <RotateCcw />
           Auto scroll
         </Button>
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full"
+          onClick={onToggleDetachedPrompter}
+        >
+          {prompterDetached ? <PanelTopClose /> : <PanelTopOpen />}
+          {prompterDetached ? 'Dock prompter' : 'Detach prompter'}
+        </Button>
+        {detachPrompterError && <p className="text-xs text-destructive">{detachPrompterError}</p>}
         <ToggleControl label="Mirror mode" checked={mirrorMode} onChange={onMirrorModeChange} />
         <ToggleControl
           label="Line highlight"
@@ -548,23 +643,20 @@ function TeleprompterOverlay({
   const [dragging, setDragging] = useState(false)
 
   function movePrompt(event: React.PointerEvent<HTMLDivElement>) {
-    const bounds = event.currentTarget.parentElement?.getBoundingClientRect()
-    if (!bounds) return
-
     onPositionChange({
-      x: Math.min(92, Math.max(8, ((event.clientX - bounds.left) / bounds.width) * 100)),
-      y: Math.min(85, Math.max(8, ((event.clientY - bounds.top) / bounds.height) * 100)),
+      x: Math.min(92, Math.max(8, (event.clientX / window.innerWidth) * 100)),
+      y: Math.min(85, Math.max(8, (event.clientY / window.innerHeight) * 100)),
     })
   }
 
   return (
-    <div className="pointer-events-none absolute inset-0 text-center text-white [text-shadow:0_2px_14px_rgb(0_0_0/0.75)]">
+    <div className="pointer-events-none fixed inset-0 z-50 text-center text-white [text-shadow:0_2px_14px_rgb(0_0_0/0.75)]">
       <div
         className={cn(
-          'pointer-events-auto absolute w-[88%] -translate-x-1/2 -translate-y-1/2 cursor-grab select-none rounded-lg bg-black/35 px-3 py-2 shadow-lg backdrop-blur-[2px] transition-opacity duration-300 active:cursor-grabbing',
+          'pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 cursor-grab select-none rounded-lg bg-black/35 px-3 py-2 shadow-lg backdrop-blur-[2px] transition-opacity duration-300 active:cursor-grabbing',
           dragging && 'ring-2 ring-white/60',
         )}
-        style={{ left: `${position.x}%`, top: `${position.y}%` }}
+        style={{ left: `${position.x}%`, top: `${position.y}%`, width: 'min(92vw, 760px)' }}
         onClick={event => event.stopPropagation()}
         onPointerDown={event => {
           event.stopPropagation()
@@ -594,6 +686,66 @@ function TeleprompterOverlay({
                 lineHighlight && lineIndex === currentLine && 'rounded-md bg-black/40 px-2',
               )}
               style={{ fontSize, lineHeight: `${lineHeight}px` }}
+            >
+              {line}
+            </p>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function DetachedPrompterWindow({
+  lines,
+  currentLine,
+  fontSize,
+  lineHighlight,
+}: {
+  lines: string[]
+  currentLine: number
+  fontSize: number
+  lineHighlight: boolean
+}) {
+  const lineHeight = Math.round(fontSize * 1.35)
+  const firstVisibleLine = Math.max(0, currentLine - 1)
+  const visibleLines = lines.slice(firstVisibleLine, firstVisibleLine + 3)
+
+  return (
+    <div
+      style={{
+        alignItems: 'center',
+        background: '#111',
+        boxSizing: 'border-box',
+        color: '#fff',
+        display: 'flex',
+        fontFamily: 'system-ui, sans-serif',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        padding: 18,
+        textAlign: 'center',
+        textShadow: '0 2px 14px rgb(0 0 0 / 0.75)',
+      }}
+    >
+      <div style={{ width: '100%' }}>
+        {visibleLines.map((line, index) => {
+          const lineIndex = firstVisibleLine + index
+
+          return (
+            <p
+              key={`${line}-${lineIndex}`}
+              style={{
+                background:
+                  lineHighlight && lineIndex === currentLine ? 'rgb(0 0 0 / 0.4)' : 'transparent',
+                borderRadius: 8,
+                fontSize,
+                fontWeight: 700,
+                lineHeight: `${lineHeight}px`,
+                margin: '0 auto',
+                maxWidth: '92%',
+                opacity: lineHighlight && lineIndex !== currentLine ? 0.45 : 1,
+                padding: '0 8px',
+              }}
             >
               {line}
             </p>
