@@ -36,6 +36,7 @@ type RecordedTake = {
 type DocumentPictureInPictureApi = {
   requestWindow: (options?: { width?: number; height?: number }) => Promise<Window>
 }
+type DetachedPrompterMode = 'prompter' | 'video'
 
 const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3333'
 
@@ -93,6 +94,9 @@ function Recorder({ video }: { video: Video }) {
   const [manualOverride, setManualOverride] = useState(false)
   const [promptPosition, setPromptPosition] = useState({ x: 50, y: 12 })
   const [detachedPrompterWindow, setDetachedPrompterWindow] = useState<Window | null>(null)
+  const [detachedPrompterMode, setDetachedPrompterMode] = useState<DetachedPrompterMode | null>(
+    null,
+  )
   const [detachPrompterError, setDetachPrompterError] = useState('')
   const [trimStartSeconds, setTrimStartSeconds] = useState(0)
   const [trimEndSeconds, setTrimEndSeconds] = useState(0)
@@ -147,7 +151,10 @@ function Recorder({ video }: { video: Video }) {
   useEffect(() => {
     if (!detachedPrompterWindow) return
 
-    const handleClose = () => setDetachedPrompterWindow(null)
+    const handleClose = () => {
+      setDetachedPrompterWindow(null)
+      setDetachedPrompterMode(null)
+    }
     detachedPrompterWindow.addEventListener('pagehide', handleClose)
     return () => detachedPrompterWindow.removeEventListener('pagehide', handleClose)
   }, [detachedPrompterWindow])
@@ -158,6 +165,7 @@ function Recorder({ video }: { video: Video }) {
 
     detachedPrompterWindow.close()
     setDetachedPrompterWindow(null)
+    setDetachedPrompterMode(null)
   }, [detachedPrompterWindow, phase])
 
   async function requestCamera() {
@@ -280,8 +288,8 @@ function Recorder({ video }: { video: Video }) {
     if (phase === 'paused') resumeRecording()
   }
 
-  async function toggleDetachedPrompter() {
-    if (detachedPrompterWindow) {
+  async function toggleDetachedPrompter(mode: DetachedPrompterMode) {
+    if (detachedPrompterWindow && detachedPrompterMode === mode) {
       closeDetachedPrompter()
       return
     }
@@ -296,11 +304,15 @@ function Recorder({ video }: { video: Video }) {
     }
 
     try {
-      const prompterWindow = await pictureInPicture.requestWindow({ width: 760, height: 260 })
+      detachedPrompterWindow?.close()
+      const prompterWindow = await pictureInPicture.requestWindow(
+        mode === 'video' ? { width: 420, height: 720 } : { width: 760, height: 260 },
+      )
       prompterWindow.document.title = 'Tsuly prompter'
       prompterWindow.document.body.innerHTML = ''
       prompterWindow.document.body.style.margin = '0'
       setDetachPrompterError('')
+      setDetachedPrompterMode(mode)
       setDetachedPrompterWindow(prompterWindow)
     } catch {
       setDetachPrompterError('Could not detach prompter. Click the button again.')
@@ -310,6 +322,7 @@ function Recorder({ video }: { video: Video }) {
   function closeDetachedPrompter() {
     detachedPrompterWindow?.close()
     setDetachedPrompterWindow(null)
+    setDetachedPrompterMode(null)
   }
 
   function retake() {
@@ -392,9 +405,10 @@ function Recorder({ video }: { video: Video }) {
             setManualLine(value)
           }}
           onAutoScroll={() => setManualOverride(false)}
-          prompterDetached={Boolean(detachedPrompterWindow)}
+          detachedPrompterMode={detachedPrompterMode}
           detachPrompterError={detachPrompterError}
-          onToggleDetachedPrompter={() => void toggleDetachedPrompter()}
+          videoDetachDisabled={!cameraReady || Boolean(permissionError)}
+          onToggleDetachedPrompter={mode => void toggleDetachedPrompter(mode)}
           videoId={video.id}
         />
 
@@ -494,12 +508,26 @@ function Recorder({ video }: { video: Video }) {
         />
       </div>
       {detachedPrompterWindow &&
+        detachedPrompterMode === 'prompter' &&
         createPortal(
           <DetachedPrompterWindow
             lines={promptLines}
             currentLine={currentLine}
             fontSize={fontSize}
             lineHighlight={lineHighlight}
+          />,
+          detachedPrompterWindow.document.body,
+        )}
+      {detachedPrompterWindow &&
+        detachedPrompterMode === 'video' &&
+        createPortal(
+          <DetachedVideoPrompterWindow
+            lines={promptLines}
+            currentLine={currentLine}
+            fontSize={fontSize}
+            lineHighlight={lineHighlight}
+            mirrorMode={mirrorMode}
+            stream={streamRef.current}
           />,
           detachedPrompterWindow.document.body,
         )}
@@ -523,8 +551,9 @@ function TeleprompterControls({
   onLineHighlightChange,
   onManualLineChange,
   onAutoScroll,
-  prompterDetached,
+  detachedPrompterMode,
   detachPrompterError,
+  videoDetachDisabled,
   onToggleDetachedPrompter,
   videoId,
 }: {
@@ -543,11 +572,15 @@ function TeleprompterControls({
   onLineHighlightChange: (value: boolean) => void
   onManualLineChange: (value: number) => void
   onAutoScroll: () => void
-  prompterDetached: boolean
+  detachedPrompterMode: DetachedPrompterMode | null
   detachPrompterError: string
-  onToggleDetachedPrompter: () => void
+  videoDetachDisabled: boolean
+  onToggleDetachedPrompter: (mode: DetachedPrompterMode) => void
   videoId: string
 }) {
+  const prompterDetached = detachedPrompterMode === 'prompter'
+  const videoDetached = detachedPrompterMode === 'video'
+
   return (
     <aside className="order-3 rounded-lg border bg-card p-4 lg:order-none">
       <Link
@@ -605,10 +638,21 @@ function TeleprompterControls({
           type="button"
           variant="outline"
           className="w-full"
-          onClick={onToggleDetachedPrompter}
+          disabled={videoDetached}
+          onClick={() => onToggleDetachedPrompter('prompter')}
         >
           {prompterDetached ? <PanelTopClose /> : <PanelTopOpen />}
           {prompterDetached ? 'Dock prompter' : 'Detach prompter'}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full"
+          disabled={videoDetachDisabled || prompterDetached}
+          onClick={() => onToggleDetachedPrompter('video')}
+        >
+          {videoDetached ? <PanelTopClose /> : <PanelTopOpen />}
+          {videoDetached ? 'Dock video + prompter' : 'Detach video + prompter'}
         </Button>
         {detachPrompterError && <p className="text-xs text-destructive">{detachPrompterError}</p>}
         <ToggleControl label="Mirror mode" checked={mirrorMode} onChange={onMirrorModeChange} />
@@ -744,6 +788,102 @@ function DetachedPrompterWindow({
                 margin: '0 auto',
                 maxWidth: '92%',
                 opacity: lineHighlight && lineIndex !== currentLine ? 0.45 : 1,
+                padding: '0 8px',
+              }}
+            >
+              {line}
+            </p>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function DetachedVideoPrompterWindow({
+  lines,
+  currentLine,
+  fontSize,
+  lineHighlight,
+  mirrorMode,
+  stream,
+}: {
+  lines: string[]
+  currentLine: number
+  fontSize: number
+  lineHighlight: boolean
+  mirrorMode: boolean
+  stream: MediaStream | null
+}) {
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+  const lineHeight = Math.round(fontSize * 1.2)
+  const firstVisibleLine = Math.max(0, currentLine - 1)
+  const visibleLines = lines.slice(firstVisibleLine, firstVisibleLine + 3)
+
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+
+    video.srcObject = stream
+    void video.play()
+
+    return () => {
+      video.srcObject = null
+    }
+  }, [stream])
+
+  return (
+    <div
+      style={{
+        background: '#111',
+        boxSizing: 'border-box',
+        color: '#fff',
+        fontFamily: 'system-ui, sans-serif',
+        height: '100vh',
+        overflow: 'hidden',
+        position: 'relative',
+        textAlign: 'center',
+        textShadow: '0 2px 14px rgb(0 0 0 / 0.75)',
+        width: '100vw',
+      }}
+    >
+      <video
+        ref={videoRef}
+        muted
+        playsInline
+        autoPlay
+        style={{
+          height: '100%',
+          objectFit: 'cover',
+          transform: mirrorMode ? 'scaleX(-1)' : undefined,
+          width: '100%',
+        }}
+      />
+      <div
+        style={{
+          left: 0,
+          padding: '18px 14px',
+          position: 'absolute',
+          right: 0,
+          top: 0,
+        }}
+      >
+        {visibleLines.map((line, index) => {
+          const lineIndex = firstVisibleLine + index
+
+          return (
+            <p
+              key={`${line}-${lineIndex}`}
+              style={{
+                background:
+                  lineHighlight && lineIndex === currentLine ? 'rgb(0 0 0 / 0.45)' : 'transparent',
+                borderRadius: 8,
+                fontSize: Math.max(22, Math.round(fontSize * 0.82)),
+                fontWeight: 700,
+                lineHeight: `${lineHeight}px`,
+                margin: '0 auto',
+                maxWidth: '94%',
+                opacity: lineHighlight && lineIndex !== currentLine ? 0.5 : 1,
                 padding: '0 8px',
               }}
             >
