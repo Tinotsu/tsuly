@@ -97,6 +97,7 @@ function Recorder({ video }: { video: Video }) {
   const [screenMode, setScreenMode] = useState(false)
   const [screenReady, setScreenReady] = useState(false)
   const [screenError, setScreenError] = useState('')
+  const [recordedPreviewStream, setRecordedPreviewStream] = useState<MediaStream | null>(null)
   const [cameraCutoutMode, setCameraCutoutMode] = useState(true)
   const [segmentationReady, setSegmentationReady] = useState(false)
   const [segmentationError, setSegmentationError] = useState('')
@@ -180,6 +181,21 @@ function Recorder({ video }: { video: Video }) {
     previewRef.current.srcObject = streamRef.current
     void previewRef.current.play()
   }, [phase, screenMode, screenReady])
+
+  useEffect(() => {
+    if (!screenMode || !screenReady || !canvasRef.current) {
+      setRecordedPreviewStream(null)
+      return
+    }
+
+    const stream = canvasRef.current.captureStream(30)
+    setRecordedPreviewStream(stream)
+
+    return () => {
+      stream.getTracks().forEach(track => track.stop())
+      setRecordedPreviewStream(null)
+    }
+  }, [screenMode, screenReady])
 
   useEffect(() => {
     if (!screenReady) return
@@ -650,25 +666,31 @@ function Recorder({ video }: { video: Video }) {
     return Math.max(0, Date.now() - startMsRef.current - pausedMsRef.current - pausedNow)
   }
 
-  function moveCameraOverlay(event: React.PointerEvent<HTMLCanvasElement>) {
-    const canvas = canvasRef.current
-    if (!canvas) return
-
-    const bounds = canvas.getBoundingClientRect()
+  function moveCameraOverlayFromBounds(event: React.PointerEvent, bounds: DOMRect) {
     setCameraOverlayPosition({
       x: Math.min(95, Math.max(5, ((event.clientX - bounds.left) / bounds.width) * 100)),
       y: Math.min(95, Math.max(5, ((event.clientY - bounds.top) / bounds.height) * 100)),
     })
   }
 
+  function resizeCameraOverlayFromBounds(event: React.PointerEvent, bounds: DOMRect) {
+    const centerY = bounds.top + (bounds.height * cameraOverlayPosition.y) / 100
+    const nextSize = (((event.clientY - centerY) * 2) / bounds.height) * 100
+    setCameraOverlaySize(Math.min(46, Math.max(14, nextSize)))
+  }
+
+  function moveCameraOverlay(event: React.PointerEvent<HTMLCanvasElement>) {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    moveCameraOverlayFromBounds(event, canvas.getBoundingClientRect())
+  }
+
   function resizeCameraOverlay(event: React.PointerEvent<HTMLDivElement>) {
     const canvas = canvasRef.current
     if (!canvas) return
 
-    const bounds = canvas.getBoundingClientRect()
-    const centerY = bounds.top + (bounds.height * cameraOverlayPosition.y) / 100
-    const nextSize = (((event.clientY - centerY) * 2) / bounds.height) * 100
-    setCameraOverlaySize(Math.min(46, Math.max(14, nextSize)))
+    resizeCameraOverlayFromBounds(event, canvas.getBoundingClientRect())
   }
 
   return (
@@ -889,7 +911,15 @@ function Recorder({ video }: { video: Video }) {
             fontSize={fontSize}
             lineHighlight={lineHighlight}
             mirrorMode={mirrorMode}
-            stream={streamRef.current}
+            cameraStream={streamRef.current}
+            recordedStream={recordedPreviewStream}
+            cameraOverlayPosition={cameraOverlayPosition}
+            cameraOverlaySize={cameraOverlaySize}
+            cameraOverlayWidth={cameraOverlayWidth}
+            promptPosition={promptPosition}
+            onCameraMove={moveCameraOverlayFromBounds}
+            onCameraResize={resizeCameraOverlayFromBounds}
+            onPromptMove={setPromptPosition}
             onStart={startCountdown}
             onPause={pauseRecording}
             onResume={resumeRecording}
@@ -1243,7 +1273,15 @@ function DetachedVideoPrompterWindow({
   fontSize,
   lineHighlight,
   mirrorMode,
-  stream,
+  cameraStream,
+  recordedStream,
+  cameraOverlayPosition,
+  cameraOverlaySize,
+  cameraOverlayWidth,
+  promptPosition,
+  onCameraMove,
+  onCameraResize,
+  onPromptMove,
   onStart,
   onPause,
   onResume,
@@ -1258,16 +1296,37 @@ function DetachedVideoPrompterWindow({
   fontSize: number
   lineHighlight: boolean
   mirrorMode: boolean
-  stream: MediaStream | null
+  cameraStream: MediaStream | null
+  recordedStream: MediaStream | null
+  cameraOverlayPosition: { x: number; y: number }
+  cameraOverlaySize: number
+  cameraOverlayWidth: number
+  promptPosition: { x: number; y: number }
+  onCameraMove: (event: React.PointerEvent, bounds: DOMRect) => void
+  onCameraResize: (event: React.PointerEvent, bounds: DOMRect) => void
+  onPromptMove: (position: { x: number; y: number }) => void
   onStart: () => void
   onPause: () => void
   onResume: () => void
   onStop: () => void
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
+  const surfaceRef = useRef<HTMLDivElement | null>(null)
+  const [viewMode, setViewMode] = useState<'camera' | 'recorded'>('camera')
   const lineHeight = Math.round(fontSize * 1.2)
   const firstVisibleLine = Math.max(0, currentLine - 1)
   const visibleLines = lines.slice(firstVisibleLine, firstVisibleLine + 3)
+  const stream = viewMode === 'recorded' && recordedStream ? recordedStream : cameraStream
+  const showingRecorded = viewMode === 'recorded' && Boolean(recordedStream)
+  const canEditRecorded = showingRecorded && Boolean(recordedStream)
+
+  function moveDetachedPrompt(event: React.PointerEvent<HTMLDivElement>) {
+    const view = event.currentTarget.ownerDocument.defaultView ?? window
+    onPromptMove({
+      x: Math.min(92, Math.max(8, (event.clientX / view.innerWidth) * 100)),
+      y: Math.min(85, Math.max(8, (event.clientY / view.innerHeight) * 100)),
+    })
+  }
 
   useEffect(() => {
     const video = videoRef.current
@@ -1280,6 +1339,10 @@ function DetachedVideoPrompterWindow({
       video.srcObject = null
     }
   }, [stream])
+
+  useEffect(() => {
+    if (viewMode === 'recorded' && !recordedStream) setViewMode('camera')
+  }, [recordedStream, viewMode])
 
   return (
     <div
@@ -1301,20 +1364,106 @@ function DetachedVideoPrompterWindow({
         muted
         playsInline
         autoPlay
-        style={{
-          height: '100%',
-          objectFit: 'cover',
-          transform: mirrorMode ? 'scaleX(-1)' : undefined,
-          width: '100%',
-        }}
+        style={
+          showingRecorded
+            ? {
+                height: 'min(100vh, calc(100vw * 16 / 9))',
+                left: '50%',
+                objectFit: 'contain',
+                position: 'absolute',
+                top: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: 'min(100vw, calc(100vh * 9 / 16))',
+              }
+            : {
+                height: '100%',
+                objectFit: 'cover',
+                transform: mirrorMode ? 'scaleX(-1)' : undefined,
+                width: '100%',
+              }
+        }
       />
+      {canEditRecorded && (
+        <div
+          ref={surfaceRef}
+          style={{
+            cursor: 'grab',
+            height: 'min(100vh, calc(100vw * 16 / 9))',
+            left: '50%',
+            position: 'absolute',
+            top: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: 'min(100vw, calc(100vh * 9 / 16))',
+            zIndex: 2,
+          }}
+          onPointerDown={event => {
+            const bounds = event.currentTarget.getBoundingClientRect()
+            event.currentTarget.setPointerCapture(event.pointerId)
+            onCameraMove(event, bounds)
+          }}
+          onPointerMove={event => {
+            if (!event.currentTarget.hasPointerCapture(event.pointerId)) return
+            onCameraMove(event, event.currentTarget.getBoundingClientRect())
+          }}
+          onPointerUp={event => event.currentTarget.releasePointerCapture(event.pointerId)}
+        >
+          <div
+            style={{
+              background: 'rgb(0 0 0 / 0.45)',
+              border: '2px solid #fff',
+              borderRadius: 999,
+              cursor: 'nwse-resize',
+              height: 20,
+              left: `${cameraOverlayPosition.x + cameraOverlayWidth / 2}%`,
+              position: 'absolute',
+              top: `${cameraOverlayPosition.y + cameraOverlaySize / 2}%`,
+              transform: 'translate(-50%, -50%)',
+              width: 20,
+              zIndex: 4,
+            }}
+            onPointerDown={event => {
+              event.stopPropagation()
+              event.currentTarget.setPointerCapture(event.pointerId)
+              const bounds = surfaceRef.current?.getBoundingClientRect()
+              if (bounds) onCameraResize(event, bounds)
+            }}
+            onPointerMove={event => {
+              event.stopPropagation()
+              if (!event.currentTarget.hasPointerCapture(event.pointerId)) return
+              const bounds = surfaceRef.current?.getBoundingClientRect()
+              if (bounds) onCameraResize(event, bounds)
+            }}
+            onPointerUp={event => {
+              event.stopPropagation()
+              event.currentTarget.releasePointerCapture(event.pointerId)
+            }}
+          />
+        </div>
+      )}
       <div
         style={{
-          left: 0,
+          cursor: 'grab',
+          left: `${promptPosition.x}%`,
           padding: '18px 14px',
           position: 'absolute',
-          right: 0,
-          top: 0,
+          top: `${promptPosition.y}%`,
+          transform: 'translate(-50%, -50%)',
+          width: 'min(92vw, 760px)',
+          zIndex: 6,
+        }}
+        onPointerDown={event => {
+          event.stopPropagation()
+          event.currentTarget.setPointerCapture(event.pointerId)
+          moveDetachedPrompt(event)
+        }}
+        onPointerMove={event => {
+          if (!event.currentTarget.hasPointerCapture(event.pointerId)) return
+          event.stopPropagation()
+          moveDetachedPrompt(event)
+        }}
+        onPointerUp={event => {
+          event.stopPropagation()
+          event.currentTarget.releasePointerCapture(event.pointerId)
         }}
       >
         {visibleLines.map((line, index) => {
@@ -1355,6 +1504,7 @@ function DetachedVideoPrompterWindow({
             position: 'absolute',
             right: 0,
             top: 0,
+            zIndex: 9,
           }}
         >
           {countdownLeft}
@@ -1367,38 +1517,58 @@ function DetachedVideoPrompterWindow({
           borderRadius: 14,
           bottom: 16,
           display: 'flex',
+          flexDirection: 'column',
           gap: 8,
           left: '50%',
           padding: 8,
           position: 'absolute',
           transform: 'translateX(-50%)',
+          zIndex: 10,
         }}
       >
-        {(phase === 'idle' || phase === 'done') && (
-          <DetachedControlButton disabled={disabled} onClick={onStart}>
-            Start
-          </DetachedControlButton>
-        )}
-        {phase === 'recording' && (
-          <>
-            <DetachedControlButton onClick={onPause}>Pause</DetachedControlButton>
-            <DetachedControlButton danger onClick={onStop}>
-              Stop
+        <div style={{ alignItems: 'center', display: 'flex', gap: 8 }}>
+          {(phase === 'idle' || phase === 'done') && (
+            <DetachedControlButton disabled={disabled} onClick={onStart}>
+              Start
             </DetachedControlButton>
-          </>
-        )}
-        {phase === 'paused' && (
-          <>
-            <DetachedControlButton onClick={onResume}>Resume</DetachedControlButton>
-            <DetachedControlButton danger onClick={onStop}>
-              Stop
+          )}
+          {phase === 'recording' && (
+            <>
+              <DetachedControlButton onClick={onPause}>Pause</DetachedControlButton>
+              <DetachedControlButton danger onClick={onStop}>
+                Stop
+              </DetachedControlButton>
+            </>
+          )}
+          {phase === 'paused' && (
+            <>
+              <DetachedControlButton onClick={onResume}>Resume</DetachedControlButton>
+              <DetachedControlButton danger onClick={onStop}>
+                Stop
+              </DetachedControlButton>
+            </>
+          )}
+          {(phase === 'recording' || phase === 'paused') && (
+            <span style={{ fontFamily: 'monospace', fontSize: 14, minWidth: 42 }}>
+              {formatElapsed(recordedMs)}
+            </span>
+          )}
+        </div>
+        {recordedStream && (
+          <div style={{ display: 'flex', gap: 4 }}>
+            <DetachedControlButton
+              active={viewMode === 'camera'}
+              onClick={() => setViewMode('camera')}
+            >
+              Camera
             </DetachedControlButton>
-          </>
-        )}
-        {(phase === 'recording' || phase === 'paused') && (
-          <span style={{ fontFamily: 'monospace', fontSize: 14, minWidth: 42 }}>
-            {formatElapsed(recordedMs)}
-          </span>
+            <DetachedControlButton
+              active={viewMode === 'recorded'}
+              onClick={() => setViewMode('recorded')}
+            >
+              Recorded
+            </DetachedControlButton>
+          </div>
         )}
       </div>
     </div>
@@ -1407,11 +1577,13 @@ function DetachedVideoPrompterWindow({
 
 function DetachedControlButton({
   children,
+  active,
   danger,
   disabled,
   onClick,
 }: {
   children: string
+  active?: boolean
   danger?: boolean
   disabled?: boolean
   onClick: () => void
@@ -1422,10 +1594,10 @@ function DetachedControlButton({
       disabled={disabled}
       onClick={onClick}
       style={{
-        background: danger ? '#ef4444' : '#fff',
+        background: danger ? '#ef4444' : active === false ? 'transparent' : '#fff',
         border: 0,
         borderRadius: 10,
-        color: danger ? '#fff' : '#111',
+        color: danger || active === false ? '#fff' : '#111',
         cursor: disabled ? 'not-allowed' : 'pointer',
         font: '600 14px system-ui, sans-serif',
         opacity: disabled ? 0.5 : 1,
