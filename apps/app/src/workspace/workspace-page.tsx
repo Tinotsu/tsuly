@@ -96,7 +96,7 @@ export function WorkspacePage() {
         {activeTab === 'ideas' && (
           <IdeasView
             ideas={workspace.ideas}
-            selectedIdea={selectedIdea}
+            selectedIdeaId={selectedIdeaId}
             onSelectIdea={setSelectedIdeaId}
           />
         )}

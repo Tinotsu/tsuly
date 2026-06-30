@@ -1,11 +1,10 @@
 import { useMutation } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
-import { ArrowRight, Plus, Search, Sparkles } from 'lucide-react'
+import { ArrowRight, Plus, Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { queryClient } from '@/lib/query_client'
 import { query } from '@/lib/tuyau'
 import { cn } from '@/lib/utils'
@@ -13,26 +12,27 @@ import { cn } from '@/lib/utils'
 import { limitCardValue } from './card-text'
 import { BRAND_BRAIN_CARD_LINE_CAPACITY, BRAND_BRAIN_CARD_LINE_HEIGHT_REM } from './constants'
 import type { Idea } from './types'
-import { FilterPill } from './ui/filter-pill'
 import { StarRating } from './ui/star-rating'
 
 export function IdeasView({
   ideas,
-  selectedIdea,
+  selectedIdeaId,
   onSelectIdea,
 }: {
   ideas: Idea[]
-  selectedIdea: Idea
+  selectedIdeaId: Idea['id']
   onSelectIdea: (id: Idea['id']) => void
 }) {
   const [draftIdeas, setDraftIdeas] = useState(ideas)
   const navigate = useNavigate()
-  const draftSelectedIdea =
-    draftIdeas.find(idea => idea.id === selectedIdea.id) ?? draftIdeas[0] ?? selectedIdea
+  const draftSelectedIdea = draftIdeas.find(idea => idea.id === selectedIdeaId) ?? draftIdeas[0]
   const saveIdea = useMutation(query.workspace.updateIdea.mutationOptions())
   const createIdea = useMutation(
     query.workspace.createIdea.mutationOptions({
       onSuccess: idea => {
+        queryClient.setQueryData(query.workspace.show.queryOptions({}).queryKey, current =>
+          current ? { ...current, ideas: [...current.ideas, idea] } : current,
+        )
         setDraftIdeas(current => [...current, idea])
         onSelectIdea(idea.id)
       },
@@ -107,15 +107,6 @@ export function IdeasView({
                 </span>
               </button>
             ))}
-          </div>
-
-          <div className="mt-4 grid gap-2 border-t pt-4 md:grid-cols-[auto_auto_1fr]">
-            <FilterPill>Pillar</FilterPill>
-            <FilterPill>Status</FilterPill>
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input className="pl-8" placeholder="Search" />
-            </div>
           </div>
         </div>
       </section>
