@@ -522,12 +522,20 @@ function Recorder({ video }: { video: Video }) {
         detachedPrompterMode === 'video' &&
         createPortal(
           <DetachedVideoPrompterWindow
+            phase={phase}
+            disabled={!cameraReady || Boolean(permissionError)}
+            recordedMs={recordedMs}
+            countdownLeft={countdownLeft}
             lines={promptLines}
             currentLine={currentLine}
             fontSize={fontSize}
             lineHighlight={lineHighlight}
             mirrorMode={mirrorMode}
             stream={streamRef.current}
+            onStart={startCountdown}
+            onPause={pauseRecording}
+            onResume={resumeRecording}
+            onStop={stopRecording}
           />,
           detachedPrompterWindow.document.body,
         )}
@@ -801,19 +809,35 @@ function DetachedPrompterWindow({
 }
 
 function DetachedVideoPrompterWindow({
+  phase,
+  disabled,
+  recordedMs,
+  countdownLeft,
   lines,
   currentLine,
   fontSize,
   lineHighlight,
   mirrorMode,
   stream,
+  onStart,
+  onPause,
+  onResume,
+  onStop,
 }: {
+  phase: RecorderPhase
+  disabled: boolean
+  recordedMs: number
+  countdownLeft: number
   lines: string[]
   currentLine: number
   fontSize: number
   lineHighlight: boolean
   mirrorMode: boolean
   stream: MediaStream | null
+  onStart: () => void
+  onPause: () => void
+  onResume: () => void
+  onStop: () => void
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const lineHeight = Math.round(fontSize * 1.2)
@@ -892,7 +916,99 @@ function DetachedVideoPrompterWindow({
           )
         })}
       </div>
+      {phase === 'countdown' && (
+        <div
+          style={{
+            alignItems: 'center',
+            background: 'rgb(0 0 0 / 0.35)',
+            bottom: 0,
+            display: 'flex',
+            fontSize: 96,
+            fontWeight: 800,
+            justifyContent: 'center',
+            left: 0,
+            position: 'absolute',
+            right: 0,
+            top: 0,
+          }}
+        >
+          {countdownLeft}
+        </div>
+      )}
+      <div
+        style={{
+          alignItems: 'center',
+          background: 'rgb(0 0 0 / 0.5)',
+          borderRadius: 14,
+          bottom: 16,
+          display: 'flex',
+          gap: 8,
+          left: '50%',
+          padding: 8,
+          position: 'absolute',
+          transform: 'translateX(-50%)',
+        }}
+      >
+        {(phase === 'idle' || phase === 'done') && (
+          <DetachedControlButton disabled={disabled} onClick={onStart}>
+            Start
+          </DetachedControlButton>
+        )}
+        {phase === 'recording' && (
+          <>
+            <DetachedControlButton onClick={onPause}>Pause</DetachedControlButton>
+            <DetachedControlButton danger onClick={onStop}>
+              Stop
+            </DetachedControlButton>
+          </>
+        )}
+        {phase === 'paused' && (
+          <>
+            <DetachedControlButton onClick={onResume}>Resume</DetachedControlButton>
+            <DetachedControlButton danger onClick={onStop}>
+              Stop
+            </DetachedControlButton>
+          </>
+        )}
+        {(phase === 'recording' || phase === 'paused') && (
+          <span style={{ fontFamily: 'monospace', fontSize: 14, minWidth: 42 }}>
+            {formatElapsed(recordedMs)}
+          </span>
+        )}
+      </div>
     </div>
+  )
+}
+
+function DetachedControlButton({
+  children,
+  danger,
+  disabled,
+  onClick,
+}: {
+  children: string
+  danger?: boolean
+  disabled?: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      style={{
+        background: danger ? '#ef4444' : '#fff',
+        border: 0,
+        borderRadius: 10,
+        color: danger ? '#fff' : '#111',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        font: '600 14px system-ui, sans-serif',
+        opacity: disabled ? 0.5 : 1,
+        padding: '9px 13px',
+      }}
+    >
+      {children}
+    </button>
   )
 }
 
