@@ -1174,23 +1174,36 @@ function TeleprompterOverlay({
   const lineHeight = Math.round(fontSize * 1.35)
   const firstVisibleLine = Math.max(0, currentLine - 1)
   const visibleLines = lines.slice(firstVisibleLine, firstVisibleLine + 3)
+  const boundsRef = useRef<HTMLDivElement | null>(null)
+  const promptRef = useRef<HTMLDivElement | null>(null)
   const [dragging, setDragging] = useState(false)
 
   function movePrompt(event: React.PointerEvent<HTMLDivElement>) {
+    const bounds = boundsRef.current?.getBoundingClientRect()
+    const promptBounds = promptRef.current?.getBoundingClientRect()
+    if (!bounds || !promptBounds) return
+
+    const minX = (promptBounds.width / bounds.width) * 50
+    const minY = (promptBounds.height / bounds.height) * 50
+
     onPositionChange({
-      x: Math.min(92, Math.max(8, (event.clientX / window.innerWidth) * 100)),
-      y: Math.min(85, Math.max(8, (event.clientY / window.innerHeight) * 100)),
+      x: Math.min(100 - minX, Math.max(minX, ((event.clientX - bounds.left) / bounds.width) * 100)),
+      y: Math.min(100 - minY, Math.max(minY, ((event.clientY - bounds.top) / bounds.height) * 100)),
     })
   }
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-50 text-center text-white [text-shadow:0_2px_14px_rgb(0_0_0/0.75)]">
+    <div
+      ref={boundsRef}
+      className="pointer-events-none absolute inset-0 z-10 overflow-hidden text-center text-white [text-shadow:0_2px_14px_rgb(0_0_0/0.75)]"
+    >
       <div
+        ref={promptRef}
         className={cn(
           'pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 cursor-grab select-none rounded-lg bg-black/35 px-3 py-2 shadow-lg backdrop-blur-[2px] transition-opacity duration-300 active:cursor-grabbing',
           dragging && 'ring-2 ring-white/60',
         )}
-        style={{ left: `${position.x}%`, top: `${position.y}%`, width: 'min(92vw, 760px)' }}
+        style={{ left: `${position.x}%`, top: `${position.y}%`, width: 'min(92%, 760px)' }}
         onClick={event => event.stopPropagation()}
         onPointerDown={event => {
           event.stopPropagation()
