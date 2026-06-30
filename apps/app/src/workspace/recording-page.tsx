@@ -76,6 +76,7 @@ function Recorder({ video }: { video: Video }) {
   const [lineHighlight, setLineHighlight] = useState(true)
   const [manualLine, setManualLine] = useState(0)
   const [manualOverride, setManualOverride] = useState(false)
+  const [promptPosition, setPromptPosition] = useState({ x: 50, y: 22 })
   const [trimStartSeconds, setTrimStartSeconds] = useState(0)
   const [trimEndSeconds, setTrimEndSeconds] = useState(0)
 
@@ -372,6 +373,8 @@ function Recorder({ video }: { video: Video }) {
                 currentLine={currentLine}
                 fontSize={fontSize}
                 lineHighlight={lineHighlight}
+                position={promptPosition}
+                onPositionChange={setPromptPosition}
               />
             )}
 
@@ -529,19 +532,56 @@ function TeleprompterOverlay({
   currentLine,
   fontSize,
   lineHighlight,
+  position,
+  onPositionChange,
 }: {
   lines: string[]
   currentLine: number
   fontSize: number
   lineHighlight: boolean
+  position: { x: number; y: number }
+  onPositionChange: (position: { x: number; y: number }) => void
 }) {
   const lineHeight = Math.round(fontSize * 1.35)
   const firstVisibleLine = Math.max(0, currentLine - 1)
   const visibleLines = lines.slice(firstVisibleLine, firstVisibleLine + 3)
+  const [dragging, setDragging] = useState(false)
+
+  function movePrompt(event: React.PointerEvent<HTMLDivElement>) {
+    const bounds = event.currentTarget.parentElement?.getBoundingClientRect()
+    if (!bounds) return
+
+    onPositionChange({
+      x: Math.min(92, Math.max(8, ((event.clientX - bounds.left) / bounds.width) * 100)),
+      y: Math.min(85, Math.max(8, ((event.clientY - bounds.top) / bounds.height) * 100)),
+    })
+  }
 
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-[20%] flex h-[58%] items-center px-5 text-center text-white [text-shadow:0_2px_14px_rgb(0_0_0/0.75)]">
-      <div className="w-full transition-opacity duration-300">
+    <div className="pointer-events-none absolute inset-0 text-center text-white [text-shadow:0_2px_14px_rgb(0_0_0/0.75)]">
+      <div
+        className={cn(
+          'pointer-events-auto absolute w-[88%] -translate-x-1/2 -translate-y-1/2 cursor-grab select-none rounded-lg bg-black/35 px-3 py-2 shadow-lg backdrop-blur-[2px] transition-opacity duration-300 active:cursor-grabbing',
+          dragging && 'ring-2 ring-white/60',
+        )}
+        style={{ left: `${position.x}%`, top: `${position.y}%` }}
+        onClick={event => event.stopPropagation()}
+        onPointerDown={event => {
+          event.stopPropagation()
+          event.currentTarget.setPointerCapture(event.pointerId)
+          setDragging(true)
+          movePrompt(event)
+        }}
+        onPointerMove={event => {
+          event.stopPropagation()
+          if (dragging) movePrompt(event)
+        }}
+        onPointerUp={event => {
+          event.stopPropagation()
+          setDragging(false)
+          event.currentTarget.releasePointerCapture(event.pointerId)
+        }}
+      >
         {visibleLines.map((line, index) => {
           const lineIndex = firstVisibleLine + index
 
@@ -551,7 +591,7 @@ function TeleprompterOverlay({
               className={cn(
                 'mx-auto max-w-[92%] font-semibold',
                 lineHighlight && lineIndex !== currentLine && 'opacity-45',
-                lineHighlight && lineIndex === currentLine && 'rounded-lg bg-black/35 px-2',
+                lineHighlight && lineIndex === currentLine && 'rounded-md bg-black/40 px-2',
               )}
               style={{ fontSize, lineHeight: `${lineHeight}px` }}
             >
