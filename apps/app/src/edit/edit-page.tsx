@@ -159,8 +159,8 @@ export function EditPage({ videoId }: { videoId: string }) {
   }
 
   return (
-    <main className="min-h-[calc(100vh-4rem)] bg-[#f6f7f5] text-[#171812]">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-5 sm:px-6 lg:px-8">
+    <main className="min-h-[calc(100vh-4rem)] bg-[#f6f7f5] text-[#171812] lg:h-[calc(100vh-4rem)] lg:overflow-hidden">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 px-4 py-4 sm:px-6 lg:grid lg:h-full lg:grid-rows-[auto_minmax(0,1fr)_auto] lg:px-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <Link
@@ -204,18 +204,15 @@ export function EditPage({ videoId }: { videoId: string }) {
           </div>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-          <section className="grid gap-4 lg:grid-cols-[minmax(260px,360px)_minmax(0,1fr)]">
-            <VideoPreview
-              rawVideoUrl={rawVideoUrl}
-              finalVideoUrl={finalVideoUrl}
-              draft={activeDraft}
-              status={activeEditingJob.status}
-            />
-            <AutomationPanel editingJob={activeEditingJob} />
-          </section>
+        <div className="grid min-h-0 gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <VideoPreview
+            rawVideoUrl={rawVideoUrl}
+            finalVideoUrl={finalVideoUrl}
+            draft={activeDraft}
+            status={activeEditingJob.status}
+          />
 
-          <aside className="space-y-4">
+          <aside className="space-y-4 lg:min-h-0 lg:overflow-y-auto">
             <SettingsPanel
               draft={activeDraft}
               disabled={!canEdit || isBusy}
@@ -231,6 +228,8 @@ export function EditPage({ videoId }: { videoId: string }) {
             ) : null}
           </aside>
         </div>
+
+        <AutomationPanel editingJob={activeEditingJob} />
       </div>
     </main>
   )
@@ -250,7 +249,7 @@ function VideoPreview({
   const source = finalVideoUrl || rawVideoUrl
 
   return (
-    <div className="rounded-lg border bg-card p-4">
+    <div className="rounded-lg border bg-card p-4 lg:flex lg:min-h-0 lg:flex-col">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-muted-foreground">Preview</p>
@@ -263,18 +262,18 @@ function VideoPreview({
         </span>
       </div>
 
-      <div className="mt-4 flex justify-center">
-        <div className="relative w-full max-w-[320px] overflow-hidden rounded-md bg-black">
+      <div className="mt-4 flex justify-center lg:min-h-0 lg:flex-1">
+        <div className="relative w-full max-w-[320px] overflow-hidden rounded-md bg-black lg:aspect-[9/16] lg:h-full lg:w-auto">
           {source ? (
             <video
               src={source}
-              className="aspect-[9/16] w-full object-cover"
+              className="aspect-[9/16] w-full object-cover lg:h-full"
               controls
               playsInline
               preload="metadata"
             />
           ) : (
-            <div className="aspect-[9/16]" />
+            <div className="aspect-[9/16] lg:h-full" />
           )}
           {!finalVideoUrl ? <SubtitlePreview draft={draft} /> : null}
         </div>
@@ -316,10 +315,10 @@ function AutomationPanel({ editingJob }: { editingJob: EditingJob }) {
   const steps = useMemo(() => automationSteps(editingJob), [editingJob])
 
   return (
-    <div className="rounded-lg border bg-card p-4">
+    <div className="rounded-lg border bg-card p-3">
       <div className="flex items-center gap-2">
         <SlidersHorizontal className="size-4 text-sky-700" />
-        <h2 className="text-lg font-semibold">Automation</h2>
+        <h2 className="font-semibold">Automation</h2>
       </div>
 
       {editingJob.status === 'failed' ? (
@@ -328,33 +327,30 @@ function AutomationPanel({ editingJob }: { editingJob: EditingJob }) {
         </p>
       ) : null}
 
-      <div className="mt-4 space-y-2">
-        {steps.map(step => (
-          <div
-            key={step.label}
-            className="flex items-center gap-3 rounded-md border bg-background p-3"
-          >
-            <span
-              className={cn(
-                'flex size-6 items-center justify-center rounded-full border',
-                step.done && 'border-emerald-600 bg-emerald-600 text-white',
-                step.active && !step.done && 'border-sky-700 text-sky-700',
-              )}
-            >
-              {step.done ? (
-                <Check className="size-3.5" />
-              ) : step.active ? (
-                <LoaderCircle className="size-3.5 animate-spin" />
-              ) : (
-                <Circle className="size-3" />
-              )}
-            </span>
-            <div>
-              <p className="text-sm font-medium">{step.label}</p>
-              <p className="text-xs text-muted-foreground">{step.detail}</p>
+      <div className="mt-3 overflow-x-auto">
+        <div className="relative flex min-w-[440px] items-center px-8 py-1">
+          <div className="absolute left-8 right-8 top-1/2 h-px -translate-y-1/2 bg-border" />
+          {steps.map(step => (
+            <div key={step.label} className="relative flex flex-1 justify-center">
+              <span
+                title={`${step.label}: ${step.detail}`}
+                className={cn(
+                  'z-10 flex size-6 items-center justify-center rounded-full border bg-card',
+                  step.done && 'border-emerald-600 bg-emerald-600 text-white',
+                  step.active && !step.done && 'border-sky-700 text-sky-700',
+                )}
+              >
+                {step.done ? (
+                  <Check className="size-3.5" />
+                ) : step.active ? (
+                  <LoaderCircle className="size-3.5 animate-spin" />
+                ) : (
+                  <Circle className="size-3" />
+                )}
+              </span>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   )
@@ -376,10 +372,10 @@ function SettingsPanel({
   onChange: Dispatch<SetStateAction<DraftSettings | null>>
 }) {
   return (
-    <div className="rounded-lg border bg-card p-4">
+    <div className="rounded-lg border bg-card p-3">
       <h2 className="text-lg font-semibold">Edit settings</h2>
 
-      <div className="mt-4 space-y-5">
+      <div className="mt-3 space-y-3">
         <div className="space-y-2">
           <Label>Font</Label>
           <div className="grid grid-cols-3 gap-2">
