@@ -40,8 +40,24 @@ type DocumentPictureInPictureApi = {
   requestWindow: (options?: { width?: number; height?: number }) => Promise<Window>
 }
 type DetachedPrompterMode = 'prompter' | 'video'
+type RecorderSettings = {
+  countdownSeconds: number
+  fontSize: number
+  scrollSpeed: number
+  mirrorMode: boolean
+  lineHighlight: boolean
+  screenMode: boolean
+  cameraCutoutMode: boolean
+  cameraOverlaySize: number
+  cameraOverlayPosition: { x: number; y: number }
+  screenZoom: number
+  manualLine: number
+  manualOverride: boolean
+  promptPosition: { x: number; y: number }
+}
 
 const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3333'
+const recorderSettingsStorageKey = 'tsuly:recorder-settings'
 const mediaPipeWasmUrl = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm'
 const selfieSegmenterModelUrl =
   'https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite'
@@ -92,31 +108,52 @@ function Recorder({ video }: { video: Video }) {
     () => buildPromptLines(video.script.spokenScript),
     [video.script.spokenScript],
   )
+  const savedRecorderSettings = useMemo<Partial<RecorderSettings>>(() => {
+    try {
+      return JSON.parse(window.localStorage.getItem(recorderSettingsStorageKey) ?? '{}')
+    } catch {
+      return {}
+    }
+  }, [])
   const [phase, setPhase] = useState<RecorderPhase>('idle')
   const [permissionError, setPermissionError] = useState('')
   const [cameraReady, setCameraReady] = useState(false)
-  const [screenMode, setScreenMode] = useState(false)
+  const [screenMode, setScreenMode] = useState(savedRecorderSettings.screenMode ?? false)
   const [screenReady, setScreenReady] = useState(false)
   const [screenError, setScreenError] = useState('')
   const [recordedPreviewStream, setRecordedPreviewStream] = useState<MediaStream | null>(null)
-  const [cameraCutoutMode, setCameraCutoutMode] = useState(true)
+  const [cameraCutoutMode, setCameraCutoutMode] = useState(
+    savedRecorderSettings.cameraCutoutMode ?? true,
+  )
   const [segmentationReady, setSegmentationReady] = useState(false)
   const [segmentationError, setSegmentationError] = useState('')
   const [uploadError, setUploadError] = useState('')
   const [take, setTake] = useState<RecordedTake | null>(null)
-  const [countdownSeconds, setCountdownSeconds] = useState(3)
+  const [countdownSeconds, setCountdownSeconds] = useState(
+    savedRecorderSettings.countdownSeconds ?? 3,
+  )
   const [countdownLeft, setCountdownLeft] = useState(0)
   const [recordedMs, setRecordedMs] = useState(0)
-  const [fontSize, setFontSize] = useState(34)
-  const [scrollSpeed, setScrollSpeed] = useState(1)
-  const [mirrorMode, setMirrorMode] = useState(true)
-  const [lineHighlight, setLineHighlight] = useState(true)
-  const [cameraOverlaySize, setCameraOverlaySize] = useState(26)
-  const [cameraOverlayPosition, setCameraOverlayPosition] = useState({ x: 50, y: 78 })
-  const [screenZoom, setScreenZoom] = useState(1)
-  const [manualLine, setManualLine] = useState(0)
-  const [manualOverride, setManualOverride] = useState(false)
-  const [promptPosition, setPromptPosition] = useState({ x: 50, y: 12 })
+  const [fontSize, setFontSize] = useState(savedRecorderSettings.fontSize ?? 34)
+  const [scrollSpeed, setScrollSpeed] = useState(savedRecorderSettings.scrollSpeed ?? 1)
+  const [mirrorMode, setMirrorMode] = useState(savedRecorderSettings.mirrorMode ?? true)
+  const [lineHighlight, setLineHighlight] = useState(savedRecorderSettings.lineHighlight ?? true)
+  const [cameraOverlaySize, setCameraOverlaySize] = useState(
+    savedRecorderSettings.cameraOverlaySize ?? 26,
+  )
+  const [cameraOverlayPosition, setCameraOverlayPosition] = useState(
+    savedRecorderSettings.cameraOverlayPosition ?? { x: 50, y: 78 },
+  )
+  const [screenZoom, setScreenZoom] = useState(savedRecorderSettings.screenZoom ?? 1)
+  const [manualLine, setManualLine] = useState(
+    Math.min(promptLines.length - 1, savedRecorderSettings.manualLine ?? 0),
+  )
+  const [manualOverride, setManualOverride] = useState(
+    savedRecorderSettings.manualOverride ?? false,
+  )
+  const [promptPosition, setPromptPosition] = useState(
+    savedRecorderSettings.promptPosition ?? { x: 50, y: 12 },
+  )
   const [detachedPrompterWindow, setDetachedPrompterWindow] = useState<Window | null>(null)
   const [detachedPrompterMode, setDetachedPrompterMode] = useState<DetachedPrompterMode | null>(
     null,
@@ -156,6 +193,41 @@ function Recorder({ video }: { video: Video }) {
       if (takeUrlRef.current) URL.revokeObjectURL(takeUrlRef.current)
     }
   }, [])
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      recorderSettingsStorageKey,
+      JSON.stringify({
+        countdownSeconds,
+        fontSize,
+        scrollSpeed,
+        mirrorMode,
+        lineHighlight,
+        screenMode,
+        cameraCutoutMode,
+        cameraOverlaySize,
+        cameraOverlayPosition,
+        screenZoom,
+        manualLine,
+        manualOverride,
+        promptPosition,
+      }),
+    )
+  }, [
+    countdownSeconds,
+    fontSize,
+    scrollSpeed,
+    mirrorMode,
+    lineHighlight,
+    screenMode,
+    cameraCutoutMode,
+    cameraOverlaySize,
+    cameraOverlayPosition,
+    screenZoom,
+    manualLine,
+    manualOverride,
+    promptPosition,
+  ])
 
   useEffect(() => {
     if (phase !== 'countdown') return
@@ -695,8 +767,8 @@ function Recorder({ video }: { video: Video }) {
   }
 
   return (
-    <main className="min-h-[calc(100svh-4rem)] bg-[#f6f7f5] text-[#171812]">
-      <div className="mx-auto grid min-h-[calc(100svh-4rem)] w-full max-w-7xl gap-4 px-3 py-3 sm:px-6 lg:grid-cols-[270px_minmax(0,1fr)_300px] lg:px-8">
+    <main className="h-[calc(100svh-4rem)] overflow-hidden bg-[#f6f7f5] text-[#171812]">
+      <div className="mx-auto grid h-full min-h-0 w-full max-w-7xl gap-4 overflow-y-auto px-3 py-3 sm:px-6 lg:grid-cols-[270px_minmax(0,1fr)_300px] lg:overflow-hidden lg:px-8">
         <TeleprompterControls
           countdownSeconds={countdownSeconds}
           fontSize={fontSize}
@@ -750,130 +822,136 @@ function Recorder({ video }: { video: Video }) {
           videoId={video.id}
         />
 
-        <section className="flex min-h-[calc(100svh-5.5rem)] flex-col justify-center gap-3 lg:min-h-[calc(100vh-7rem)]">
-          <div
-            className={cn(
-              'relative mx-auto aspect-[9/16] h-[calc(100svh-11rem)] max-h-[760px] min-h-[420px] w-full max-w-[430px] overflow-hidden rounded-lg bg-black shadow-sm lg:h-[calc(100vh-12rem)]',
-              (phase === 'recording' || phase === 'paused') && 'cursor-pointer',
-            )}
-            onClick={toggleRecording}
-          >
-            {take &&
-            phase !== 'idle' &&
-            phase !== 'countdown' &&
-            phase !== 'recording' &&
-            phase !== 'paused' ? (
-              <video
-                key={take.id}
-                className="size-full object-cover"
-                src={take.url}
-                controls
-                playsInline
-                preload="auto"
-              />
-            ) : screenMode && screenReady ? (
-              <>
-                <canvas
-                  ref={canvasRef}
-                  className="size-full cursor-grab active:cursor-grabbing"
-                  onPointerDown={event => {
-                    event.currentTarget.setPointerCapture(event.pointerId)
-                    moveCameraOverlay(event)
-                  }}
-                  onPointerMove={event => {
-                    if (event.currentTarget.hasPointerCapture(event.pointerId))
+        <section className="flex min-h-0 flex-col gap-3 overflow-hidden lg:h-full">
+          <div className="flex min-h-0 flex-1 items-center justify-center">
+            <div
+              className={cn(
+                'relative aspect-[9/16] h-full max-h-full w-full max-w-[430px] overflow-hidden rounded-lg bg-black shadow-sm',
+                (phase === 'recording' || phase === 'paused') && 'cursor-pointer',
+              )}
+              onClick={toggleRecording}
+            >
+              {take &&
+              phase !== 'idle' &&
+              phase !== 'countdown' &&
+              phase !== 'recording' &&
+              phase !== 'paused' ? (
+                <video
+                  key={take.id}
+                  className="size-full object-cover"
+                  src={take.url}
+                  controls
+                  playsInline
+                  preload="auto"
+                />
+              ) : screenMode && screenReady ? (
+                <>
+                  <canvas
+                    ref={canvasRef}
+                    className="size-full cursor-grab active:cursor-grabbing"
+                    onPointerDown={event => {
+                      event.currentTarget.setPointerCapture(event.pointerId)
                       moveCameraOverlay(event)
-                  }}
-                  onPointerUp={event => event.currentTarget.releasePointerCapture(event.pointerId)}
-                />
-                <div
-                  className="absolute size-5 cursor-nwse-resize rounded-full border-2 border-white bg-black/45 shadow"
-                  style={{
-                    left: `${cameraOverlayPosition.x + cameraOverlayWidth / 2}%`,
-                    top: `${cameraOverlayPosition.y + cameraOverlaySize / 2}%`,
-                    transform: 'translate(-50%, -50%)',
-                  }}
-                  onClick={event => event.stopPropagation()}
-                  onPointerDown={event => {
-                    event.stopPropagation()
-                    event.currentTarget.setPointerCapture(event.pointerId)
-                    resizeCameraOverlay(event)
-                  }}
-                  onPointerMove={event => {
-                    event.stopPropagation()
-                    if (event.currentTarget.hasPointerCapture(event.pointerId))
+                    }}
+                    onPointerMove={event => {
+                      if (event.currentTarget.hasPointerCapture(event.pointerId))
+                        moveCameraOverlay(event)
+                    }}
+                    onPointerUp={event =>
+                      event.currentTarget.releasePointerCapture(event.pointerId)
+                    }
+                  />
+                  <div
+                    className="absolute size-5 cursor-nwse-resize rounded-full border-2 border-white bg-black/45 shadow"
+                    style={{
+                      left: `${cameraOverlayPosition.x + cameraOverlayWidth / 2}%`,
+                      top: `${cameraOverlayPosition.y + cameraOverlaySize / 2}%`,
+                      transform: 'translate(-50%, -50%)',
+                    }}
+                    onClick={event => event.stopPropagation()}
+                    onPointerDown={event => {
+                      event.stopPropagation()
+                      event.currentTarget.setPointerCapture(event.pointerId)
                       resizeCameraOverlay(event)
-                  }}
-                  onPointerUp={event => {
-                    event.stopPropagation()
-                    event.currentTarget.releasePointerCapture(event.pointerId)
-                  }}
-                />
-              </>
-            ) : (
-              <video
-                ref={previewRef}
-                className={cn('size-full object-cover', mirrorMode && 'scale-x-[-1]')}
-                muted
-                playsInline
-                autoPlay
-              />
-            )}
-            {screenMode && screenReady && (
-              <video ref={previewRef} className="hidden" muted playsInline autoPlay />
-            )}
-            <video ref={screenPreviewRef} className="hidden" muted playsInline autoPlay />
-
-            {phase === 'countdown' && (
-              <div className="absolute inset-0 grid place-items-center bg-black/40 text-7xl font-semibold text-white">
-                {countdownLeft}
-              </div>
-            )}
-
-            {!detachedPrompterWindow &&
-              (phase === 'idle' || phase === 'recording' || phase === 'paused') && (
-                <TeleprompterOverlay
-                  lines={promptLines}
-                  currentLine={currentLine}
-                  fontSize={fontSize}
-                  lineHighlight={lineHighlight}
-                  position={promptPosition}
-                  onPositionChange={setPromptPosition}
+                    }}
+                    onPointerMove={event => {
+                      event.stopPropagation()
+                      if (event.currentTarget.hasPointerCapture(event.pointerId))
+                        resizeCameraOverlay(event)
+                    }}
+                    onPointerUp={event => {
+                      event.stopPropagation()
+                      event.currentTarget.releasePointerCapture(event.pointerId)
+                    }}
+                  />
+                </>
+              ) : (
+                <video
+                  ref={previewRef}
+                  className={cn('size-full object-cover', mirrorMode && 'scale-x-[-1]')}
+                  muted
+                  playsInline
+                  autoPlay
                 />
               )}
+              {screenMode && screenReady && (
+                <video ref={previewRef} className="hidden" muted playsInline autoPlay />
+              )}
+              <video ref={screenPreviewRef} className="hidden" muted playsInline autoPlay />
 
-            {permissionError && (
-              <div className="absolute inset-x-4 top-4 rounded-lg bg-white p-4 text-sm shadow">
-                <p>{permissionError}</p>
-                <Button type="button" className="mt-3" onClick={() => void requestCamera()}>
-                  <RefreshCcw />
-                  Retry
-                </Button>
-              </div>
-            )}
+              {phase === 'countdown' && (
+                <div className="absolute inset-0 grid place-items-center bg-black/40 text-7xl font-semibold text-white">
+                  {countdownLeft}
+                </div>
+              )}
 
-            {phase === 'done' && (
-              <div className="absolute inset-x-4 bottom-4 rounded-lg bg-white p-4 text-sm shadow">
-                <p className="font-medium">Take uploaded. Auto-edit queued.</p>
-                <p className="mt-1 text-muted-foreground">
-                  Captions, silence removal, cuts, and export will run server-side.
-                </p>
-              </div>
-            )}
+              {!detachedPrompterWindow &&
+                (phase === 'idle' || phase === 'recording' || phase === 'paused') && (
+                  <TeleprompterOverlay
+                    lines={promptLines}
+                    currentLine={currentLine}
+                    fontSize={fontSize}
+                    lineHighlight={lineHighlight}
+                    position={promptPosition}
+                    onPositionChange={setPromptPosition}
+                  />
+                )}
+
+              {permissionError && (
+                <div className="absolute inset-x-4 top-4 rounded-lg bg-white p-4 text-sm shadow">
+                  <p>{permissionError}</p>
+                  <Button type="button" className="mt-3" onClick={() => void requestCamera()}>
+                    <RefreshCcw />
+                    Retry
+                  </Button>
+                </div>
+              )}
+
+              {phase === 'done' && (
+                <div className="absolute inset-x-4 bottom-4 rounded-lg bg-white p-4 text-sm shadow">
+                  <p className="font-medium">Take uploaded. Auto-edit queued.</p>
+                  <p className="mt-1 text-muted-foreground">
+                    Captions, silence removal, cuts, and export will run server-side.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
 
-          <RecorderControls
-            phase={phase}
-            disabled={recordingDisabled}
-            uploadDisabled={!canUpload}
-            recordedMs={recordedMs}
-            onStart={startCountdown}
-            onPause={pauseRecording}
-            onResume={resumeRecording}
-            onStop={stopRecording}
-            onRetake={retake}
-            onUpload={() => void uploadTake()}
-          />
+          <div className="shrink-0">
+            <RecorderControls
+              phase={phase}
+              disabled={recordingDisabled}
+              uploadDisabled={!canUpload}
+              recordedMs={recordedMs}
+              onStart={startCountdown}
+              onPause={pauseRecording}
+              onResume={resumeRecording}
+              onStop={stopRecording}
+              onRetake={retake}
+              onUpload={() => void uploadTake()}
+            />
+          </div>
         </section>
 
         <ReviewPanel
@@ -1005,17 +1083,17 @@ function TeleprompterControls({
   const videoDetached = detachedPrompterMode === 'video'
 
   return (
-    <aside className="order-3 rounded-lg border bg-card p-4 lg:order-none">
+    <aside className="order-3 flex flex-col overflow-hidden rounded-lg border bg-card p-4 lg:order-none lg:min-h-0 lg:max-h-full">
       <Link
         to="/videos/$videoId/script"
         params={{ videoId }}
-        className="mb-5 inline-flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground"
+        className="mb-5 inline-flex shrink-0 items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="size-4" />
         Script
       </Link>
 
-      <div className="space-y-5">
+      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto lg:pr-1">
         <RangeControl
           label="Font size"
           value={fontSize}
@@ -1751,7 +1829,7 @@ function ReviewPanel({
   onTrimEndChange: (value: number) => void
 }) {
   return (
-    <aside className="order-4 rounded-lg border bg-card p-4 lg:order-none lg:self-start">
+    <aside className="order-4 rounded-lg border bg-card p-4 lg:order-none lg:max-h-full lg:min-h-0 lg:overflow-y-auto">
       <p className="text-sm font-medium text-muted-foreground">Recording</p>
       <h1 className="mt-1 text-xl font-semibold tracking-tight">{video.title}</h1>
 
