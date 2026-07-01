@@ -1040,32 +1040,30 @@ function TeleprompterControls({
           <RotateCcw />
           Auto scroll
         </Button>
-        <div className="space-y-3 rounded-lg border bg-muted/30 p-3">
+        <div className="space-y-3 rounded-lg border bg-muted/30 p-3 has-[.record-screen-info:hover]:[&_.record-screen-info-panel]:block has-[.record-screen-info-panel:hover]:[&_.record-screen-info-panel]:block">
           <div className="flex items-center justify-between gap-3 text-sm font-medium">
             <div className="flex items-center gap-2">
               Record screen
-              <button
-                type="button"
-                className="group relative rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              <span
+                className="record-screen-info inline-flex cursor-default rounded-full text-muted-foreground hover:text-foreground"
                 aria-label="To make the page phone-sized, right-click the page, choose Inspect, then click the phone/tablet icon in DevTools."
               >
                 <Info className="size-4" />
-                <span className="pointer-events-none absolute left-1/2 top-6 z-20 hidden w-72 -translate-x-1/2 rounded-md border bg-popover p-2 text-left text-xs font-normal text-popover-foreground shadow-md group-hover:block group-focus-visible:block">
-                  Right-click the page, choose Inspect, then click the phone/tablet icon in
-                  DevTools.
-                  <img
-                    src="/devtools-phone-toggle.png"
-                    alt="Chrome DevTools phone and tablet toggle"
-                    className="mt-2 w-full rounded border"
-                  />
-                </span>
-              </button>
+              </span>
             </div>
             <input
               type="checkbox"
               checked={screenMode}
               onChange={event => onScreenModeChange(event.target.checked)}
               className="size-4 accent-foreground"
+            />
+          </div>
+          <div className="record-screen-info-panel hidden rounded-md border bg-popover p-2 text-xs font-normal text-popover-foreground shadow-md">
+            Right-click the page, choose Inspect, then click the phone/tablet icon in DevTools.
+            <img
+              src="/devtools-phone-toggle.png"
+              alt="Chrome DevTools phone and tablet toggle"
+              className="mt-2 w-full rounded border"
             />
           </div>
           {screenMode && (
