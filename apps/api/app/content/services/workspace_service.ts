@@ -371,10 +371,7 @@ export default class WorkspaceService {
       transcript: '',
       scriptHook: '',
       scriptSpoken: '',
-      scriptShotList: '',
       scriptOnScreenText: '',
-      scriptAssetsNeeded: '',
-      scriptRecordingNotes: '',
       preview: 'No cut yet',
       publish: 'Not scheduled',
       sortOrder: (lastVideo?.sortOrder ?? -1) + 1,
@@ -738,10 +735,7 @@ export default class WorkspaceService {
   private applyScript(video: Video, script: VideoScript) {
     video.scriptHook = script.hook
     video.scriptSpoken = script.spokenScript
-    video.scriptShotList = ''
     video.scriptOnScreenText = script.onScreenText
-    video.scriptAssetsNeeded = ''
-    video.scriptRecordingNotes = ''
   }
 
   private async getVideo(userId: string, videoId: string) {
@@ -795,10 +789,7 @@ export default class WorkspaceService {
             transcript: video.transcript,
             scriptHook: video.scriptHook,
             scriptSpoken: video.scriptSpoken,
-            scriptShotList: '',
             scriptOnScreenText: video.scriptOnScreenText,
-            scriptAssetsNeeded: '',
-            scriptRecordingNotes: '',
             preview: video.preview,
             publish: video.publish,
             sortOrder: index,
