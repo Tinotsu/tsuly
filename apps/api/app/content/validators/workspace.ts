@@ -58,6 +58,14 @@ export const updateIdeaValidator = vine.compile(
   }),
 )
 
+export const createVideoValidator = vine.compile(
+  vine.object({
+    ideaId: vine.string().optional(),
+    title: vine.string().optional(),
+    idea: cardText().optional(),
+  }),
+)
+
 export const updateVideoScriptValidator = vine.compile(
   vine.object({
     hook: cardText().optional(),

@@ -2,7 +2,6 @@ import { useMutation } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import {
   Check,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Clapperboard,
@@ -11,7 +10,6 @@ import {
   Film,
   Mic2,
   Plus,
-  Search,
   Send,
   Trash2,
   X,
@@ -19,7 +17,6 @@ import {
 import { useEffect, useState } from 'react'
 
 import { Button, buttonVariants } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { queryClient } from '@/lib/query_client'
 import { query } from '@/lib/tuyau'
 import { cn } from '@/lib/utils'
@@ -33,6 +30,26 @@ const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3333'
 export function VideosView({ videos }: { videos: Video[] }) {
   const [detailVideoId, setDetailVideoId] = useState<string | null>(null)
   const detailVideo = videos.find(video => video.id === detailVideoId)
+  const createVideo = useMutation(
+    query.workspace.createVideo.mutationOptions({
+      onSuccess: async video => {
+        await queryClient.invalidateQueries({
+          queryKey: query.workspace.show.queryOptions({}).queryKey,
+        })
+        setDetailVideoId(video.id)
+      },
+    }),
+  )
+  const deleteVideo = useMutation(
+    query.workspace.deleteVideo.mutationOptions({
+      onSuccess: async result => {
+        if (detailVideoId === result.id) setDetailVideoId(null)
+        await queryClient.invalidateQueries({
+          queryKey: query.workspace.show.queryOptions({}).queryKey,
+        })
+      },
+    }),
+  )
 
   return (
     <>
@@ -42,68 +59,80 @@ export function VideosView({ videos }: { videos: Video[] }) {
             <h2 className="text-lg font-semibold">Videos</h2>
             <p className="text-sm text-muted-foreground">{videos.length} videos in production</p>
           </div>
-          <Button type="button">
+          <Button
+            type="button"
+            disabled={createVideo.isPending}
+            onClick={() => createVideo.mutate({ body: {} })}
+          >
             <Plus />
-            New video
-          </Button>
-        </div>
-
-        <div className="grid gap-2 border-b p-4 md:grid-cols-[1fr_auto]">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input className="pl-8" placeholder="Search" />
-          </div>
-          <Button type="button" variant="outline">
-            Filter: All
-            <ChevronDown />
+            {createVideo.isPending ? 'Creating...' : 'New video'}
           </Button>
         </div>
 
         <div className="divide-y">
-          {videos.map(video => (
-            <div
-              key={video.id}
-              className={cn(
-                'flex items-start gap-3 px-4 py-4 transition hover:bg-muted/50',
-                detailVideoId === video.id && 'bg-muted/60',
-              )}
-            >
-              <button
-                type="button"
-                onClick={() => setDetailVideoId(video.id)}
-                className="flex min-w-0 flex-1 flex-col gap-3 text-left"
+          {videos.length ? (
+            videos.map(video => (
+              <div
+                key={video.id}
+                className={cn(
+                  'flex items-start gap-3 px-4 py-4 transition hover:bg-muted/50',
+                  detailVideoId === video.id && 'bg-muted/60',
+                )}
               >
-                <span className="flex items-center gap-2 font-semibold">
-                  <Clapperboard className="size-4 text-sky-700" />
-                  {video.title}
-                </span>
-                <span className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
-                  {video.stages.map(stage => (
-                    <VideoStage key={stage.label} done={stage.done} label={stage.label} />
-                  ))}
-                </span>
-              </button>
-              <Link
-                to="/videos/$videoId/script"
-                params={{ videoId: video.id }}
-                className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'self-start')}
-              >
-                <FileText />
-                Script
-              </Link>
-            </div>
-          ))}
+                <button
+                  type="button"
+                  onClick={() => setDetailVideoId(video.id)}
+                  className="flex min-w-0 flex-1 flex-col gap-3 text-left"
+                >
+                  <span className="flex items-center gap-2 font-semibold">
+                    <Clapperboard className="size-4 text-sky-700" />
+                    {video.title}
+                  </span>
+                  <span className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
+                    {video.stages.map(stage => (
+                      <VideoStage key={stage.label} done={stage.done} label={stage.label} />
+                    ))}
+                  </span>
+                </button>
+                <Link
+                  to="/videos/$videoId/script"
+                  params={{ videoId: video.id }}
+                  className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'self-start')}
+                >
+                  <FileText />
+                  Script
+                </Link>
+              </div>
+            ))
+          ) : (
+            <p className="px-4 py-5 text-sm text-muted-foreground">No videos yet</p>
+          )}
         </div>
       </section>
 
       {detailVideo ? (
-        <VideoDetailModal video={detailVideo} onClose={() => setDetailVideoId(null)} />
+        <VideoDetailModal
+          video={detailVideo}
+          isDeleting={deleteVideo.isPending}
+          onDelete={() => deleteVideo.mutate({ params: { id: detailVideo.id } })}
+          onClose={() => setDetailVideoId(null)}
+        />
       ) : null}
     </>
   )
 }
 
-function VideoDetailModal({ video, onClose }: { video: Video; onClose: () => void }) {
+function VideoDetailModal({
+  video,
+  isDeleting,
+  onDelete,
+  onClose,
+}: {
+  video: Video
+  isDeleting: boolean
+  onDelete: () => void
+  onClose: () => void
+}) {
   const [publishOpen, setPublishOpen] = useState(false)
   const finalVideoUrl = video.editingJob?.finalPath
     ? `${apiBaseUrl}${video.editingJob.finalPath}`
@@ -255,6 +284,10 @@ function VideoDetailModal({ video, onClose }: { video: Video; onClose: () => voi
           <Button type="button" disabled={!finalVideoUrl} onClick={() => setPublishOpen(true)}>
             <Send />
             Publish
+          </Button>
+          <Button type="button" variant="destructive" disabled={isDeleting} onClick={onDelete}>
+            <Trash2 />
+            Delete
           </Button>
         </div>
 

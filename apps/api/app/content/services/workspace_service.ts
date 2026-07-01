@@ -352,6 +352,71 @@ export default class WorkspaceService {
     return this.serializeIdea(idea)
   }
 
+  async deleteIdea(userId: string, ideaId: string) {
+    const idea = await Idea.query().where('user_id', userId).where('id', ideaId).firstOrFail()
+
+    await idea.delete()
+
+    return { id: idea.id }
+  }
+
+  async createVideo(
+    userId: string,
+    payload: {
+      ideaId?: string
+      title?: string
+      idea?: string
+    } = {},
+  ) {
+    const idea = payload.ideaId
+      ? await Idea.query().where('user_id', userId).where('id', payload.ideaId).firstOrFail()
+      : null
+    const lastVideo = await Video.query()
+      .where('user_id', userId)
+      .orderBy('sort_order', 'desc')
+      .first()
+    const title = payload.title ?? idea?.title ?? 'New video'
+
+    const video = await Video.create({
+      userId,
+      ideaId: idea?.id ?? null,
+      title,
+      idea: payload.idea ?? (idea ? idea.problem || idea.title : ''),
+      transcript: '',
+      scriptHook: '',
+      scriptSpoken: '',
+      scriptShotList: '',
+      scriptOnScreenText: '',
+      scriptAssetsNeeded: '',
+      scriptRecordingNotes: '',
+      preview: 'No cut yet',
+      publish: 'Not scheduled',
+      sortOrder: (lastVideo?.sortOrder ?? -1) + 1,
+    })
+
+    await video.related('stages').createMany([
+      { label: 'Script', done: false, sortOrder: 0 },
+      { label: 'Record', done: false, sortOrder: 1 },
+      { label: 'Edit', done: false, sortOrder: 2 },
+      { label: 'Publish', done: false, sortOrder: 3 },
+    ])
+    await video.related('editing').createMany([
+      { label: 'Captions', done: false, sortOrder: 0 },
+      { label: 'Smart cuts', done: false, sortOrder: 1 },
+      { label: 'Silence removal', done: false, sortOrder: 2 },
+    ])
+
+    return this.serializeVideo(await this.getVideo(userId, video.id))
+  }
+
+  async deleteVideo(userId: string, videoId: string) {
+    const video = await Video.query().where('user_id', userId).where('id', videoId).firstOrFail()
+
+    await video.delete()
+
+    return { id: video.id }
+  }
+
   async generateScriptFromIdea(userId: string, ideaId: string) {
     const idea = await Idea.query()
       .where('user_id', userId)

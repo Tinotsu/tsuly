@@ -8,6 +8,7 @@ import {
   chatVideoScriptValidator,
   createBrandBrainFieldValidator,
   createIdeaValidator,
+  createVideoValidator,
   createVideoRecordingValidator,
   updateBrandBrainFieldValidator,
   updateIdeaValidator,
@@ -63,11 +64,33 @@ export default class WorkspaceController {
     return await serialize.withoutWrapping(idea)
   }
 
+  async deleteIdea({ auth, params, serialize }: HttpContext) {
+    const user = auth.getUserOrFail()
+    const result = await workspaceService.deleteIdea(user.id, params.id)
+
+    return await serialize.withoutWrapping(result)
+  }
+
   async generateScriptFromIdea({ auth, params, serialize }: HttpContext) {
     const user = auth.getUserOrFail()
     const video = await workspaceService.generateScriptFromIdea(user.id, params.id)
 
     return await serialize.withoutWrapping(video)
+  }
+
+  async createVideo({ auth, request, serialize }: HttpContext) {
+    const user = auth.getUserOrFail()
+    const payload = await request.validateUsing(createVideoValidator)
+    const video = await workspaceService.createVideo(user.id, payload)
+
+    return await serialize.withoutWrapping(video)
+  }
+
+  async deleteVideo({ auth, params, serialize }: HttpContext) {
+    const user = auth.getUserOrFail()
+    const result = await workspaceService.deleteVideo(user.id, params.id)
+
+    return await serialize.withoutWrapping(result)
   }
 
   async updateVideoScript({ auth, params, request, serialize }: HttpContext) {

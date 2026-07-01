@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
-import { ArrowRight, Plus, Sparkles } from 'lucide-react'
+import { ArrowRight, Plus, Sparkles, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { Badge } from '@/components/ui/badge'
@@ -27,6 +27,33 @@ export function IdeasView({
   const navigate = useNavigate()
   const draftSelectedIdea = draftIdeas.find(idea => idea.id === selectedIdeaId) ?? draftIdeas[0]
   const saveIdea = useMutation(query.workspace.updateIdea.mutationOptions())
+  const deleteIdea = useMutation(
+    query.workspace.deleteIdea.mutationOptions({
+      onSuccess: result => {
+        queryClient.setQueryData(query.workspace.show.queryOptions({}).queryKey, current =>
+          current
+            ? { ...current, ideas: current.ideas.filter(idea => idea.id !== result.id) }
+            : current,
+        )
+        setDraftIdeas(current => {
+          const nextIdeas = current.filter(idea => idea.id !== result.id)
+          if (selectedIdeaId === result.id) onSelectIdea(nextIdeas[0]?.id ?? '')
+          return nextIdeas
+        })
+      },
+    }),
+  )
+  const createVideo = useMutation(
+    query.workspace.createVideo.mutationOptions({
+      onSuccess: async () => {
+        await queryClient.invalidateQueries({
+          queryKey: query.workspace.show.queryOptions({}).queryKey,
+        })
+        window.location.hash = 'videos'
+        window.dispatchEvent(new Event('hashchange'))
+      },
+    }),
+  )
   const createIdea = useMutation(
     query.workspace.createIdea.mutationOptions({
       onSuccess: idea => {
@@ -83,55 +110,79 @@ export function IdeasView({
 
         <div className="p-4">
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {draftIdeas.map(idea => (
-              <button
-                key={idea.id}
-                type="button"
-                onClick={() => onSelectIdea(idea.id)}
-                className={cn(
-                  'flex min-h-44 flex-col rounded-lg border bg-background p-4 text-left transition hover:border-foreground/30 hover:bg-muted/30',
-                  draftSelectedIdea.id === idea.id && 'border-foreground bg-muted/40',
-                )}
-              >
-                <span className="line-clamp-2 text-base font-semibold leading-snug">
-                  {idea.title}
-                </span>
-                <span className="mt-auto">
-                  {idea.pillar ? <Badge variant="secondary">{idea.pillar}</Badge> : null}
-                  <span
-                    className="mt-3 flex items-center gap-0.5"
-                    aria-label={`${idea.rating} stars`}
-                  >
-                    <StarRating rating={idea.rating} />
+            {draftIdeas.length ? (
+              draftIdeas.map(idea => (
+                <button
+                  key={idea.id}
+                  type="button"
+                  onClick={() => onSelectIdea(idea.id)}
+                  className={cn(
+                    'flex min-h-44 flex-col rounded-lg border bg-background p-4 text-left transition hover:border-foreground/30 hover:bg-muted/30',
+                    draftSelectedIdea?.id === idea.id && 'border-foreground bg-muted/40',
+                  )}
+                >
+                  <span className="line-clamp-2 text-base font-semibold leading-snug">
+                    {idea.title}
                   </span>
-                </span>
-              </button>
-            ))}
+                  <span className="mt-auto">
+                    {idea.pillar ? <Badge variant="secondary">{idea.pillar}</Badge> : null}
+                    <span
+                      className="mt-3 flex items-center gap-0.5"
+                      aria-label={`${idea.rating} stars`}
+                    >
+                      <StarRating rating={idea.rating} />
+                    </span>
+                  </span>
+                </button>
+              ))
+            ) : (
+              <p className="rounded-lg border bg-background p-4 text-sm text-muted-foreground">
+                No ideas yet
+              </p>
+            )}
           </div>
         </div>
       </section>
 
-      <IdeaDetail
-        idea={draftSelectedIdea}
-        isGenerating={generateScript.isPending}
-        onGenerate={() => generateScript.mutate({ params: { id: draftSelectedIdea.id } })}
-        onUpdate={values => updateDraftIdea(draftSelectedIdea.id, values)}
-        onSave={saveDraftIdea}
-      />
+      {draftSelectedIdea ? (
+        <IdeaDetail
+          idea={draftSelectedIdea}
+          isDeleting={deleteIdea.isPending}
+          isGenerating={generateScript.isPending}
+          isMoving={createVideo.isPending}
+          onDelete={() => deleteIdea.mutate({ params: { id: draftSelectedIdea.id } })}
+          onGenerate={() => generateScript.mutate({ params: { id: draftSelectedIdea.id } })}
+          onMove={() => createVideo.mutate({ body: { ideaId: draftSelectedIdea.id } })}
+          onUpdate={values => updateDraftIdea(draftSelectedIdea.id, values)}
+          onSave={saveDraftIdea}
+        />
+      ) : (
+        <aside className="rounded-lg border bg-card p-4 text-sm text-muted-foreground">
+          Create an idea to edit it.
+        </aside>
+      )}
     </div>
   )
 }
 
 function IdeaDetail({
   idea,
+  isDeleting,
   isGenerating,
+  isMoving,
+  onDelete,
   onGenerate,
+  onMove,
   onUpdate,
   onSave,
 }: {
   idea: Idea
+  isDeleting: boolean
   isGenerating: boolean
+  isMoving: boolean
+  onDelete: () => void
   onGenerate: () => void
+  onMove: () => void
   onUpdate: (values: Partial<Idea>) => void
   onSave: (idea: Idea) => void
 }) {
@@ -189,9 +240,13 @@ function IdeaDetail({
           <Sparkles />
           {isGenerating ? 'Generating...' : 'Generate script'}
         </Button>
-        <Button type="button" variant="outline">
+        <Button type="button" variant="outline" disabled={isMoving} onClick={onMove}>
           <ArrowRight />
-          Move to Videos
+          {isMoving ? 'Moving...' : 'Move to Videos'}
+        </Button>
+        <Button type="button" variant="destructive" disabled={isDeleting} onClick={onDelete}>
+          <Trash2 />
+          Delete
         </Button>
       </div>
     </aside>

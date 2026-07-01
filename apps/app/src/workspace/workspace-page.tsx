@@ -40,10 +40,6 @@ export function WorkspacePage() {
     }
   }, [selectedBrandSectionId, selectedIdeaId, workspace])
 
-  const selectedIdea = useMemo(
-    () => workspace.ideas.find(idea => idea.id === selectedIdeaId) ?? workspace.ideas[0],
-    [selectedIdeaId, workspace.ideas],
-  )
   const selectedBrandSection = useMemo(
     () =>
       workspace.brandBrain.find(section => section.id === selectedBrandSectionId) ??
@@ -56,7 +52,7 @@ export function WorkspacePage() {
     window.history.replaceState(null, '', `#${tabHashes[tab]}`)
   }
 
-  if (!selectedIdea || workspace.videos.length === 0 || !selectedBrandSection) {
+  if (!selectedBrandSection) {
     return <EmptyWorkspace />
   }
 

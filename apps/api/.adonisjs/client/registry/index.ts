@@ -60,11 +60,29 @@ const routes = {
     tokens: [{"old":"/content/ideas/:id","type":0,"val":"content","end":""},{"old":"/content/ideas/:id","type":0,"val":"ideas","end":""},{"old":"/content/ideas/:id","type":1,"val":"id","end":""}],
     types: placeholder as Registry['workspace.update_idea']['types'],
   },
+  'workspace.delete_idea': {
+    methods: ["DELETE"],
+    pattern: '/content/ideas/:id',
+    tokens: [{"old":"/content/ideas/:id","type":0,"val":"content","end":""},{"old":"/content/ideas/:id","type":0,"val":"ideas","end":""},{"old":"/content/ideas/:id","type":1,"val":"id","end":""}],
+    types: placeholder as Registry['workspace.delete_idea']['types'],
+  },
   'workspace.generate_script_from_idea': {
     methods: ["POST"],
     pattern: '/content/ideas/:id/script',
     tokens: [{"old":"/content/ideas/:id/script","type":0,"val":"content","end":""},{"old":"/content/ideas/:id/script","type":0,"val":"ideas","end":""},{"old":"/content/ideas/:id/script","type":1,"val":"id","end":""},{"old":"/content/ideas/:id/script","type":0,"val":"script","end":""}],
     types: placeholder as Registry['workspace.generate_script_from_idea']['types'],
+  },
+  'workspace.create_video': {
+    methods: ["POST"],
+    pattern: '/content/videos',
+    tokens: [{"old":"/content/videos","type":0,"val":"content","end":""},{"old":"/content/videos","type":0,"val":"videos","end":""}],
+    types: placeholder as Registry['workspace.create_video']['types'],
+  },
+  'workspace.delete_video': {
+    methods: ["DELETE"],
+    pattern: '/content/videos/:id',
+    tokens: [{"old":"/content/videos/:id","type":0,"val":"content","end":""},{"old":"/content/videos/:id","type":0,"val":"videos","end":""},{"old":"/content/videos/:id","type":1,"val":"id","end":""}],
+    types: placeholder as Registry['workspace.delete_video']['types'],
   },
   'workspace.update_video_script': {
     methods: ["PATCH"],

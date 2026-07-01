@@ -56,10 +56,10 @@ export default await Env.create(new URL('../', import.meta.url), {
   |----------------------------------------------------------
   */
   OPENAI_API_KEY: Env.schema.string.optional(),
-  OPENAI_BASE_URL: Env.schema.string.optional(),
   OPENAI_AUDIO_BASE_URL: Env.schema.string.optional(),
-  OPENAI_MODEL: Env.schema.string.optional(),
   DEEPSEEK_API_KEY: Env.schema.string.optional(),
+  DEEPSEEK_BASE_URL: Env.schema.string.optional(),
+  DEEPSEEK_MODEL: Env.schema.string.optional(),
   WHISPER_MODEL: Env.schema.string.optional(),
   FFMPEG_PATH: Env.schema.string.optional(),
 })

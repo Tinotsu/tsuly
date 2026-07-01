@@ -103,7 +103,7 @@ export default class ScriptGeneratorService {
     messages: Array<{ role: 'system' | 'user'; content: string }>,
     includeSummary = false,
   ) {
-    const { apiKey, baseUrl, model } = this.openAiConfig()
+    const { apiKey, baseUrl, model } = this.scriptConfig()
     const response = await this.fetchClient(`${baseUrl.replace(/\/$/, '')}/chat/completions`, {
       method: 'POST',
       headers: {
@@ -171,25 +171,17 @@ export default class ScriptGeneratorService {
     return ''
   }
 
-  private openAiConfig() {
-    const apiKey = this.config.apiKey ?? env.get('OPENAI_API_KEY') ?? env.get('DEEPSEEK_API_KEY')
-    const usingDeepSeek =
-      !this.config.apiKey && !env.get('OPENAI_API_KEY') && env.get('DEEPSEEK_API_KEY')
+  private scriptConfig() {
+    const apiKey = this.config.apiKey ?? env.get('DEEPSEEK_API_KEY')
 
     if (!apiKey) {
-      throw new Error('OPENAI_API_KEY is not configured')
+      throw new Error('DEEPSEEK_API_KEY is not configured')
     }
 
     return {
       apiKey,
-      baseUrl:
-        this.config.baseUrl ??
-        env.get('OPENAI_BASE_URL') ??
-        (usingDeepSeek ? 'https://api.deepseek.com/v1' : 'https://api.openai.com/v1'),
-      model:
-        this.config.model ??
-        env.get('OPENAI_MODEL') ??
-        (usingDeepSeek ? 'deepseek-chat' : 'gpt-4o-mini'),
+      baseUrl: this.config.baseUrl ?? env.get('DEEPSEEK_BASE_URL') ?? 'https://api.deepseek.com/v1',
+      model: this.config.model ?? env.get('DEEPSEEK_MODEL') ?? 'deepseek-chat',
     }
   }
 }

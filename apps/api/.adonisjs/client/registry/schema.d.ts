@@ -115,6 +115,18 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['updateIdea']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
   }
+  'workspace.delete_idea': {
+    methods: ["DELETE"]
+    pattern: '/content/ideas/:id'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['deleteIdea']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['deleteIdea']>>>
+    }
+  }
   'workspace.generate_script_from_idea': {
     methods: ["POST"]
     pattern: '/content/ideas/:id/script'
@@ -125,6 +137,30 @@ export interface Registry {
       query: {}
       response: ExtractResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['generateScriptFromIdea']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['generateScriptFromIdea']>>>
+    }
+  }
+  'workspace.create_video': {
+    methods: ["POST"]
+    pattern: '/content/videos'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#app/content/validators/workspace').createVideoValidator)>>
+      paramsTuple: []
+      params: {}
+      query: ExtractQuery<InferInput<(typeof import('#app/content/validators/workspace').createVideoValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['createVideo']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['createVideo']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'workspace.delete_video': {
+    methods: ["DELETE"]
+    pattern: '/content/videos/:id'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['deleteVideo']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['deleteVideo']>>>
     }
   }
   'workspace.update_video_script': {
