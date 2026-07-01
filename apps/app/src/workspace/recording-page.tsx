@@ -7,13 +7,9 @@ import {
   Info,
   PanelTopClose,
   PanelTopOpen,
-  Pause,
-  Play,
   RefreshCcw,
   RotateCcw,
   ScreenShare,
-  Square,
-  Upload,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -752,14 +748,14 @@ function Recorder({ video }: { video: Video }) {
     setCameraOverlaySize(Math.min(46, Math.max(14, nextSize)))
   }
 
-  function moveCameraOverlay(event: React.PointerEvent<HTMLCanvasElement>) {
+  function moveCameraOverlay(event: React.PointerEvent) {
     const canvas = canvasRef.current
     if (!canvas) return
 
     moveCameraOverlayFromBounds(event, canvas.getBoundingClientRect())
   }
 
-  function resizeCameraOverlay(event: React.PointerEvent<HTMLDivElement>) {
+  function resizeCameraOverlay(event: React.PointerEvent) {
     const canvas = canvasRef.current
     if (!canvas) return
 
@@ -822,136 +818,43 @@ function Recorder({ video }: { video: Video }) {
           videoId={video.id}
         />
 
-        <section className="flex min-h-0 flex-col gap-3 overflow-hidden lg:h-full">
-          <div className="flex min-h-0 flex-1 items-center justify-center">
-            <div
-              className={cn(
-                'relative aspect-[9/16] h-full max-h-full w-full max-w-[430px] overflow-hidden rounded-lg bg-black shadow-sm',
-                (phase === 'recording' || phase === 'paused') && 'cursor-pointer',
-              )}
-              onClick={toggleRecording}
-            >
-              {take &&
-              phase !== 'idle' &&
-              phase !== 'countdown' &&
-              phase !== 'recording' &&
-              phase !== 'paused' ? (
-                <video
-                  key={take.id}
-                  className="size-full object-cover"
-                  src={take.url}
-                  controls
-                  playsInline
-                  preload="auto"
-                />
-              ) : screenMode && screenReady ? (
-                <>
-                  <canvas
-                    ref={canvasRef}
-                    className="size-full cursor-grab active:cursor-grabbing"
-                    onPointerDown={event => {
-                      event.currentTarget.setPointerCapture(event.pointerId)
-                      moveCameraOverlay(event)
-                    }}
-                    onPointerMove={event => {
-                      if (event.currentTarget.hasPointerCapture(event.pointerId))
-                        moveCameraOverlay(event)
-                    }}
-                    onPointerUp={event =>
-                      event.currentTarget.releasePointerCapture(event.pointerId)
-                    }
-                  />
-                  <div
-                    className="absolute size-5 cursor-nwse-resize rounded-full border-2 border-white bg-black/45 shadow"
-                    style={{
-                      left: `${cameraOverlayPosition.x + cameraOverlayWidth / 2}%`,
-                      top: `${cameraOverlayPosition.y + cameraOverlaySize / 2}%`,
-                      transform: 'translate(-50%, -50%)',
-                    }}
-                    onClick={event => event.stopPropagation()}
-                    onPointerDown={event => {
-                      event.stopPropagation()
-                      event.currentTarget.setPointerCapture(event.pointerId)
-                      resizeCameraOverlay(event)
-                    }}
-                    onPointerMove={event => {
-                      event.stopPropagation()
-                      if (event.currentTarget.hasPointerCapture(event.pointerId))
-                        resizeCameraOverlay(event)
-                    }}
-                    onPointerUp={event => {
-                      event.stopPropagation()
-                      event.currentTarget.releasePointerCapture(event.pointerId)
-                    }}
-                  />
-                </>
-              ) : (
-                <video
-                  ref={previewRef}
-                  className={cn('size-full object-cover', mirrorMode && 'scale-x-[-1]')}
-                  muted
-                  playsInline
-                  autoPlay
-                />
-              )}
-              {screenMode && screenReady && (
-                <video ref={previewRef} className="hidden" muted playsInline autoPlay />
-              )}
-              <video ref={screenPreviewRef} className="hidden" muted playsInline autoPlay />
-
-              {phase === 'countdown' && (
-                <div className="absolute inset-0 grid place-items-center bg-black/40 text-7xl font-semibold text-white">
-                  {countdownLeft}
-                </div>
-              )}
-
-              {!detachedPrompterWindow &&
-                (phase === 'idle' || phase === 'recording' || phase === 'paused') && (
-                  <TeleprompterOverlay
-                    lines={promptLines}
-                    currentLine={currentLine}
-                    fontSize={fontSize}
-                    lineHighlight={lineHighlight}
-                    position={promptPosition}
-                    onPositionChange={setPromptPosition}
-                  />
-                )}
-
-              {permissionError && (
-                <div className="absolute inset-x-4 top-4 rounded-lg bg-white p-4 text-sm shadow">
-                  <p>{permissionError}</p>
-                  <Button type="button" className="mt-3" onClick={() => void requestCamera()}>
-                    <RefreshCcw />
-                    Retry
-                  </Button>
-                </div>
-              )}
-
-              {phase === 'done' && (
-                <div className="absolute inset-x-4 bottom-4 rounded-lg bg-white p-4 text-sm shadow">
-                  <p className="font-medium">Take uploaded. Auto-edit queued.</p>
-                  <p className="mt-1 text-muted-foreground">
-                    Captions, silence removal, cuts, and export will run server-side.
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="shrink-0">
-            <RecorderControls
-              phase={phase}
-              disabled={recordingDisabled}
-              uploadDisabled={!canUpload}
-              recordedMs={recordedMs}
-              onStart={startCountdown}
-              onPause={pauseRecording}
-              onResume={resumeRecording}
-              onStop={stopRecording}
-              onRetake={retake}
-              onUpload={() => void uploadTake()}
-            />
-          </div>
+        <section className="flex min-h-0 items-center justify-center overflow-hidden lg:h-full">
+          <RecordingStage
+            variant="embedded"
+            phase={phase}
+            disabled={recordingDisabled}
+            recordedMs={recordedMs}
+            countdownLeft={countdownLeft}
+            lines={promptLines}
+            currentLine={currentLine}
+            fontSize={fontSize}
+            lineHighlight={lineHighlight}
+            mirrorMode={mirrorMode}
+            showPrompter={!detachedPrompterWindow}
+            promptPosition={promptPosition}
+            onPromptMove={setPromptPosition}
+            screenMode={screenMode}
+            screenReady={screenReady}
+            previewVideoRef={previewRef}
+            canvasRef={canvasRef}
+            screenPreviewRef={screenPreviewRef}
+            cameraOverlayPosition={cameraOverlayPosition}
+            cameraOverlaySize={cameraOverlaySize}
+            cameraOverlayWidth={cameraOverlayWidth}
+            onCameraMove={moveCameraOverlay}
+            onCameraResize={resizeCameraOverlay}
+            onToggleRecording={toggleRecording}
+            take={take}
+            permissionError={permissionError}
+            onRetryCamera={() => void requestCamera()}
+            onStart={startCountdown}
+            onPause={pauseRecording}
+            onResume={resumeRecording}
+            onStop={stopRecording}
+            onRetake={retake}
+            onUpload={() => void uploadTake()}
+            uploadDisabled={!canUpload}
+          />
         </section>
 
         <ReviewPanel
@@ -980,7 +883,8 @@ function Recorder({ video }: { video: Video }) {
       {detachedPrompterWindow &&
         detachedPrompterMode === 'video' &&
         createPortal(
-          <DetachedVideoPrompterWindow
+          <RecordingStage
+            variant="fullscreen"
             phase={phase}
             disabled={!cameraReady || Boolean(permissionError)}
             recordedMs={recordedMs}
@@ -990,15 +894,16 @@ function Recorder({ video }: { video: Video }) {
             fontSize={fontSize}
             lineHighlight={lineHighlight}
             mirrorMode={mirrorMode}
+            showPrompter
+            promptPosition={promptPosition}
+            onPromptMove={setPromptPosition}
             cameraStream={streamRef.current}
             recordedStream={recordedPreviewStream}
             cameraOverlayPosition={cameraOverlayPosition}
             cameraOverlaySize={cameraOverlaySize}
             cameraOverlayWidth={cameraOverlayWidth}
-            promptPosition={promptPosition}
-            onCameraMove={moveCameraOverlayFromBounds}
-            onCameraResize={resizeCameraOverlayFromBounds}
-            onPromptMove={setPromptPosition}
+            onCameraMoveFromBounds={moveCameraOverlayFromBounds}
+            onCameraResizeFromBounds={resizeCameraOverlayFromBounds}
             onStart={startCountdown}
             onPause={pauseRecording}
             onResume={resumeRecording}
@@ -1234,88 +1139,502 @@ function TeleprompterControls({
   )
 }
 
-function TeleprompterOverlay({
+function RecordingStage({
+  variant,
+  phase,
+  disabled,
+  recordedMs,
+  countdownLeft,
   lines,
   currentLine,
   fontSize,
   lineHighlight,
-  position,
-  onPositionChange,
+  mirrorMode,
+  showPrompter,
+  promptPosition,
+  onPromptMove,
+  screenMode = false,
+  screenReady = false,
+  previewVideoRef,
+  canvasRef,
+  screenPreviewRef,
+  cameraOverlayPosition = { x: 50, y: 78 },
+  cameraOverlaySize = 26,
+  cameraOverlayWidth = 26,
+  onCameraMove,
+  onCameraResize,
+  onCameraMoveFromBounds,
+  onCameraResizeFromBounds,
+  onToggleRecording,
+  take = null,
+  permissionError = '',
+  onRetryCamera,
+  cameraStream = null,
+  recordedStream = null,
+  onStart,
+  onPause,
+  onResume,
+  onStop,
+  onRetake,
+  onUpload,
+  uploadDisabled = false,
 }: {
+  variant: 'embedded' | 'fullscreen'
+  phase: RecorderPhase
+  disabled: boolean
+  recordedMs: number
+  countdownLeft: number
   lines: string[]
   currentLine: number
   fontSize: number
   lineHighlight: boolean
-  position: { x: number; y: number }
-  onPositionChange: (position: { x: number; y: number }) => void
+  mirrorMode: boolean
+  showPrompter: boolean
+  promptPosition: { x: number; y: number }
+  onPromptMove: (position: { x: number; y: number }) => void
+  screenMode?: boolean
+  screenReady?: boolean
+  previewVideoRef?: React.RefObject<HTMLVideoElement | null>
+  canvasRef?: React.RefObject<HTMLCanvasElement | null>
+  screenPreviewRef?: React.RefObject<HTMLVideoElement | null>
+  cameraOverlayPosition?: { x: number; y: number }
+  cameraOverlaySize?: number
+  cameraOverlayWidth?: number
+  onCameraMove?: (event: React.PointerEvent) => void
+  onCameraResize?: (event: React.PointerEvent) => void
+  onCameraMoveFromBounds?: (event: React.PointerEvent, bounds: DOMRect) => void
+  onCameraResizeFromBounds?: (event: React.PointerEvent, bounds: DOMRect) => void
+  onToggleRecording?: () => void
+  take?: RecordedTake | null
+  permissionError?: string
+  onRetryCamera?: () => void
+  cameraStream?: MediaStream | null
+  recordedStream?: MediaStream | null
+  onStart: () => void
+  onPause: () => void
+  onResume: () => void
+  onStop: () => void
+  onRetake?: () => void
+  onUpload?: () => void
+  uploadDisabled?: boolean
 }) {
-  const lineHeight = Math.round(fontSize * 1.35)
+  const isFullscreen = variant === 'fullscreen'
+  const stageRef = useRef<HTMLDivElement | null>(null)
+  const streamVideoRef = useRef<HTMLVideoElement | null>(null)
+  const editSurfaceRef = useRef<HTMLDivElement | null>(null)
+  const [viewMode, setViewMode] = useState<'camera' | 'recorded'>('camera')
+  const promptFontSize = Math.max(22, Math.round(fontSize * 0.82))
+  const lineHeight = Math.round(fontSize * 1.2)
   const firstVisibleLine = Math.max(0, currentLine - 1)
   const visibleLines = lines.slice(firstVisibleLine, firstVisibleLine + 3)
-  const boundsRef = useRef<HTMLDivElement | null>(null)
-  const promptRef = useRef<HTMLDivElement | null>(null)
-  const [dragging, setDragging] = useState(false)
+  const showingTakePlayback = Boolean(
+    take &&
+    phase !== 'idle' &&
+    phase !== 'countdown' &&
+    phase !== 'recording' &&
+    phase !== 'paused',
+  )
+  const stream = viewMode === 'recorded' && recordedStream ? recordedStream : cameraStream
+  const showingRecorded = isFullscreen && viewMode === 'recorded' && Boolean(recordedStream)
+  const canEditRecorded = showingRecorded
+  const showPrompterOverlay =
+    showPrompter && (phase === 'idle' || phase === 'recording' || phase === 'paused')
+  const portraitFrameStyle = isFullscreen
+    ? {
+        height: 'min(100vh, calc(100vw * 16 / 9))',
+        width: 'min(100vw, calc(100vh * 9 / 16))',
+      }
+    : { height: '100%', width: '100%' }
 
   function movePrompt(event: React.PointerEvent<HTMLDivElement>) {
-    const bounds = boundsRef.current?.getBoundingClientRect()
-    const promptBounds = promptRef.current?.getBoundingClientRect()
-    if (!bounds || !promptBounds) return
+    const stage = stageRef.current?.getBoundingClientRect()
+    if (!stage) return
 
-    const minX = (promptBounds.width / bounds.width) * 50
-    const minY = (promptBounds.height / bounds.height) * 50
-
-    onPositionChange({
-      x: Math.min(100 - minX, Math.max(minX, ((event.clientX - bounds.left) / bounds.width) * 100)),
-      y: Math.min(100 - minY, Math.max(minY, ((event.clientY - bounds.top) / bounds.height) * 100)),
+    onPromptMove({
+      x: Math.min(92, Math.max(8, ((event.clientX - stage.left) / stage.width) * 100)),
+      y: Math.min(85, Math.max(8, ((event.clientY - stage.top) / stage.height) * 100)),
     })
   }
 
+  useEffect(() => {
+    if (!isFullscreen) return
+
+    const video = streamVideoRef.current
+    if (!video) return
+
+    video.srcObject = stream
+    void video.play()
+
+    return () => {
+      video.srcObject = null
+    }
+  }, [isFullscreen, stream])
+
+  useEffect(() => {
+    if (viewMode === 'recorded' && !recordedStream) setViewMode('camera')
+  }, [recordedStream, viewMode])
+
   return (
     <div
-      ref={boundsRef}
-      className="pointer-events-none absolute inset-0 z-10 overflow-hidden text-center text-white [text-shadow:0_2px_14px_rgb(0_0_0/0.75)]"
+      ref={stageRef}
+      onClick={
+        !isFullscreen && onToggleRecording && (phase === 'recording' || phase === 'paused')
+          ? onToggleRecording
+          : undefined
+      }
+      style={
+        isFullscreen
+          ? {
+              background: '#111',
+              boxSizing: 'border-box',
+              color: '#fff',
+              fontFamily: 'system-ui, sans-serif',
+              height: '100vh',
+              overflow: 'hidden',
+              position: 'relative',
+              textAlign: 'center',
+              textShadow: '0 2px 14px rgb(0 0 0 / 0.75)',
+              width: '100vw',
+            }
+          : {
+              aspectRatio: '9 / 16',
+              background: '#111',
+              boxSizing: 'border-box',
+              color: '#fff',
+              fontFamily: 'system-ui, sans-serif',
+              height: '100%',
+              maxHeight: '100%',
+              maxWidth: 'min(430px, 100%)',
+              overflow: 'hidden',
+              position: 'relative',
+              textAlign: 'center',
+              textShadow: '0 2px 14px rgb(0 0 0 / 0.75)',
+              width: 'auto',
+            }
+      }
+      className={cn(
+        !isFullscreen && (phase === 'recording' || phase === 'paused') && 'cursor-pointer',
+      )}
     >
+      {showingTakePlayback && take ? (
+        <video
+          key={take.id}
+          className="size-full object-cover"
+          src={take.url}
+          controls
+          playsInline
+          preload="auto"
+        />
+      ) : isFullscreen ? (
+        <video
+          ref={streamVideoRef}
+          muted
+          playsInline
+          autoPlay
+          style={
+            showingRecorded
+              ? {
+                  height: portraitFrameStyle.height,
+                  left: '50%',
+                  objectFit: 'contain',
+                  position: 'absolute',
+                  top: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  width: portraitFrameStyle.width,
+                }
+              : {
+                  height: '100%',
+                  objectFit: 'cover',
+                  transform: mirrorMode ? 'scaleX(-1)' : undefined,
+                  width: '100%',
+                }
+          }
+        />
+      ) : screenMode && screenReady && canvasRef ? (
+        <>
+          <canvas
+            ref={canvasRef}
+            className="size-full cursor-grab active:cursor-grabbing"
+            onPointerDown={event => {
+              event.stopPropagation()
+              event.currentTarget.setPointerCapture(event.pointerId)
+              onCameraMove?.(event)
+            }}
+            onPointerMove={event => {
+              if (event.currentTarget.hasPointerCapture(event.pointerId)) onCameraMove?.(event)
+            }}
+            onPointerUp={event => event.currentTarget.releasePointerCapture(event.pointerId)}
+          />
+          <div
+            className="absolute size-5 cursor-nwse-resize rounded-full border-2 border-white bg-black/45 shadow"
+            style={{
+              left: `${cameraOverlayPosition.x + cameraOverlayWidth / 2}%`,
+              top: `${cameraOverlayPosition.y + cameraOverlaySize / 2}%`,
+              transform: 'translate(-50%, -50%)',
+            }}
+            onClick={event => event.stopPropagation()}
+            onPointerDown={event => {
+              event.stopPropagation()
+              event.currentTarget.setPointerCapture(event.pointerId)
+              onCameraResize?.(event)
+            }}
+            onPointerMove={event => {
+              event.stopPropagation()
+              if (event.currentTarget.hasPointerCapture(event.pointerId)) onCameraResize?.(event)
+            }}
+            onPointerUp={event => {
+              event.stopPropagation()
+              event.currentTarget.releasePointerCapture(event.pointerId)
+            }}
+          />
+        </>
+      ) : (
+        <video
+          ref={previewVideoRef}
+          className="size-full object-cover"
+          style={{ transform: mirrorMode ? 'scaleX(-1)' : undefined }}
+          muted
+          playsInline
+          autoPlay
+        />
+      )}
+
+      {!isFullscreen && screenMode && screenReady && previewVideoRef && (
+        <video ref={previewVideoRef} className="hidden" muted playsInline autoPlay />
+      )}
+      {!isFullscreen && screenPreviewRef && (
+        <video ref={screenPreviewRef} className="hidden" muted playsInline autoPlay />
+      )}
+
+      {canEditRecorded && onCameraMoveFromBounds && (
+        <div
+          ref={editSurfaceRef}
+          style={{
+            cursor: 'grab',
+            height: portraitFrameStyle.height,
+            left: '50%',
+            position: 'absolute',
+            top: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: portraitFrameStyle.width,
+            zIndex: 2,
+          }}
+          onPointerDown={event => {
+            const bounds = event.currentTarget.getBoundingClientRect()
+            event.currentTarget.setPointerCapture(event.pointerId)
+            onCameraMoveFromBounds(event, bounds)
+          }}
+          onPointerMove={event => {
+            if (!event.currentTarget.hasPointerCapture(event.pointerId)) return
+            onCameraMoveFromBounds(event, event.currentTarget.getBoundingClientRect())
+          }}
+          onPointerUp={event => event.currentTarget.releasePointerCapture(event.pointerId)}
+        >
+          <div
+            style={{
+              background: 'rgb(0 0 0 / 0.45)',
+              border: '2px solid #fff',
+              borderRadius: 999,
+              cursor: 'nwse-resize',
+              height: 20,
+              left: `${cameraOverlayPosition.x + cameraOverlayWidth / 2}%`,
+              position: 'absolute',
+              top: `${cameraOverlayPosition.y + cameraOverlaySize / 2}%`,
+              transform: 'translate(-50%, -50%)',
+              width: 20,
+              zIndex: 4,
+            }}
+            onPointerDown={event => {
+              event.stopPropagation()
+              event.currentTarget.setPointerCapture(event.pointerId)
+              const bounds = editSurfaceRef.current?.getBoundingClientRect()
+              if (bounds && onCameraResizeFromBounds) onCameraResizeFromBounds(event, bounds)
+            }}
+            onPointerMove={event => {
+              event.stopPropagation()
+              if (!event.currentTarget.hasPointerCapture(event.pointerId)) return
+              const bounds = editSurfaceRef.current?.getBoundingClientRect()
+              if (bounds && onCameraResizeFromBounds) onCameraResizeFromBounds(event, bounds)
+            }}
+            onPointerUp={event => {
+              event.stopPropagation()
+              event.currentTarget.releasePointerCapture(event.pointerId)
+            }}
+          />
+        </div>
+      )}
+
+      {showPrompterOverlay && (
+        <div
+          style={{
+            cursor: 'grab',
+            left: `${promptPosition.x}%`,
+            padding: '18px 14px',
+            position: 'absolute',
+            top: `${promptPosition.y}%`,
+            transform: 'translate(-50%, -50%)',
+            width: isFullscreen ? 'min(92vw, 760px)' : 'min(92%, 760px)',
+            zIndex: 6,
+          }}
+          onClick={event => event.stopPropagation()}
+          onPointerDown={event => {
+            event.stopPropagation()
+            event.currentTarget.setPointerCapture(event.pointerId)
+            movePrompt(event)
+          }}
+          onPointerMove={event => {
+            if (!event.currentTarget.hasPointerCapture(event.pointerId)) return
+            event.stopPropagation()
+            movePrompt(event)
+          }}
+          onPointerUp={event => {
+            event.stopPropagation()
+            event.currentTarget.releasePointerCapture(event.pointerId)
+          }}
+        >
+          {visibleLines.map((line, index) => {
+            const lineIndex = firstVisibleLine + index
+
+            return (
+              <p
+                key={`${line}-${lineIndex}`}
+                style={{
+                  background:
+                    lineHighlight && lineIndex === currentLine
+                      ? 'rgb(0 0 0 / 0.45)'
+                      : 'transparent',
+                  borderRadius: 8,
+                  fontSize: promptFontSize,
+                  fontWeight: 700,
+                  lineHeight: `${lineHeight}px`,
+                  margin: '0 auto',
+                  maxWidth: '94%',
+                  opacity: lineHighlight && lineIndex !== currentLine ? 0.5 : 1,
+                  padding: '0 8px',
+                }}
+              >
+                {line}
+              </p>
+            )
+          })}
+        </div>
+      )}
+
+      {phase === 'countdown' && (
+        <div
+          style={{
+            alignItems: 'center',
+            background: 'rgb(0 0 0 / 0.35)',
+            bottom: 0,
+            display: 'flex',
+            fontSize: 96,
+            fontWeight: 800,
+            justifyContent: 'center',
+            left: 0,
+            position: 'absolute',
+            right: 0,
+            top: 0,
+            zIndex: 9,
+          }}
+        >
+          {countdownLeft}
+        </div>
+      )}
+
+      {!isFullscreen && permissionError && (
+        <div className="absolute inset-x-4 top-4 z-20 rounded-lg bg-white p-4 text-left text-sm text-[#111] shadow">
+          <p>{permissionError}</p>
+          {onRetryCamera && (
+            <Button type="button" className="mt-3" onClick={onRetryCamera}>
+              <RefreshCcw />
+              Retry
+            </Button>
+          )}
+        </div>
+      )}
+
+      {!isFullscreen && phase === 'done' && (
+        <div className="absolute inset-x-4 bottom-20 z-20 rounded-lg bg-white p-4 text-left text-sm text-[#111] shadow">
+          <p className="font-medium">Take uploaded. Auto-edit queued.</p>
+          <p className="mt-1 text-muted-foreground">
+            Captions, silence removal, cuts, and export will run server-side.
+          </p>
+        </div>
+      )}
+
       <div
-        ref={promptRef}
-        className={cn(
-          'pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 cursor-grab select-none rounded-lg bg-black/35 px-3 py-2 shadow-lg backdrop-blur-[2px] transition-opacity duration-300 active:cursor-grabbing',
-          dragging && 'ring-2 ring-white/60',
-        )}
-        style={{ left: `${position.x}%`, top: `${position.y}%`, width: 'min(92%, 760px)' }}
-        onClick={event => event.stopPropagation()}
-        onPointerDown={event => {
-          event.stopPropagation()
-          event.currentTarget.setPointerCapture(event.pointerId)
-          setDragging(true)
-          movePrompt(event)
-        }}
-        onPointerMove={event => {
-          event.stopPropagation()
-          if (dragging) movePrompt(event)
-        }}
-        onPointerUp={event => {
-          event.stopPropagation()
-          setDragging(false)
-          event.currentTarget.releasePointerCapture(event.pointerId)
+        style={{
+          alignItems: 'center',
+          background: 'rgb(0 0 0 / 0.5)',
+          borderRadius: 14,
+          bottom: 16,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8,
+          left: '50%',
+          padding: 8,
+          position: 'absolute',
+          transform: 'translateX(-50%)',
+          zIndex: 10,
         }}
       >
-        {visibleLines.map((line, index) => {
-          const lineIndex = firstVisibleLine + index
-
-          return (
-            <p
-              key={`${line}-${lineIndex}`}
-              className={cn(
-                'mx-auto max-w-[92%] font-semibold',
-                lineHighlight && lineIndex !== currentLine && 'opacity-45',
-                lineHighlight && lineIndex === currentLine && 'rounded-md bg-black/40 px-2',
-              )}
-              style={{ fontSize, lineHeight: `${lineHeight}px` }}
+        <div style={{ alignItems: 'center', display: 'flex', gap: 8 }}>
+          {(phase === 'idle' || phase === 'done') && (
+            <DetachedControlButton disabled={disabled} onClick={onStart}>
+              Start
+            </DetachedControlButton>
+          )}
+          {phase === 'recording' && (
+            <>
+              <DetachedControlButton onClick={onPause}>Pause</DetachedControlButton>
+              <DetachedControlButton danger onClick={onStop}>
+                Stop
+              </DetachedControlButton>
+            </>
+          )}
+          {phase === 'paused' && (
+            <>
+              <DetachedControlButton onClick={onResume}>Resume</DetachedControlButton>
+              <DetachedControlButton danger onClick={onStop}>
+                Stop
+              </DetachedControlButton>
+            </>
+          )}
+          {phase === 'review' && onRetake && onUpload && (
+            <>
+              <DetachedControlButton onClick={onRetake}>Retake</DetachedControlButton>
+              <DetachedControlButton disabled={uploadDisabled} onClick={onUpload}>
+                Approve
+              </DetachedControlButton>
+            </>
+          )}
+          {phase === 'uploading' && (
+            <DetachedControlButton disabled onClick={() => undefined}>
+              Uploading
+            </DetachedControlButton>
+          )}
+          {(phase === 'recording' || phase === 'paused') && (
+            <span style={{ color: '#fff', fontFamily: 'monospace', fontSize: 14, minWidth: 42 }}>
+              {formatElapsed(recordedMs)}
+            </span>
+          )}
+        </div>
+        {isFullscreen && recordedStream && (
+          <div style={{ display: 'flex', gap: 4 }}>
+            <DetachedControlButton
+              active={viewMode === 'camera'}
+              onClick={() => setViewMode('camera')}
             >
-              {line}
-            </p>
-          )
-        })}
+              Camera
+            </DetachedControlButton>
+            <DetachedControlButton
+              active={viewMode === 'recorded'}
+              onClick={() => setViewMode('recorded')}
+            >
+              Recorded
+            </DetachedControlButton>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -1381,318 +1700,6 @@ function DetachedPrompterWindow({
   )
 }
 
-function DetachedVideoPrompterWindow({
-  phase,
-  disabled,
-  recordedMs,
-  countdownLeft,
-  lines,
-  currentLine,
-  fontSize,
-  lineHighlight,
-  mirrorMode,
-  cameraStream,
-  recordedStream,
-  cameraOverlayPosition,
-  cameraOverlaySize,
-  cameraOverlayWidth,
-  promptPosition,
-  onCameraMove,
-  onCameraResize,
-  onPromptMove,
-  onStart,
-  onPause,
-  onResume,
-  onStop,
-}: {
-  phase: RecorderPhase
-  disabled: boolean
-  recordedMs: number
-  countdownLeft: number
-  lines: string[]
-  currentLine: number
-  fontSize: number
-  lineHighlight: boolean
-  mirrorMode: boolean
-  cameraStream: MediaStream | null
-  recordedStream: MediaStream | null
-  cameraOverlayPosition: { x: number; y: number }
-  cameraOverlaySize: number
-  cameraOverlayWidth: number
-  promptPosition: { x: number; y: number }
-  onCameraMove: (event: React.PointerEvent, bounds: DOMRect) => void
-  onCameraResize: (event: React.PointerEvent, bounds: DOMRect) => void
-  onPromptMove: (position: { x: number; y: number }) => void
-  onStart: () => void
-  onPause: () => void
-  onResume: () => void
-  onStop: () => void
-}) {
-  const videoRef = useRef<HTMLVideoElement | null>(null)
-  const surfaceRef = useRef<HTMLDivElement | null>(null)
-  const [viewMode, setViewMode] = useState<'camera' | 'recorded'>('camera')
-  const lineHeight = Math.round(fontSize * 1.2)
-  const firstVisibleLine = Math.max(0, currentLine - 1)
-  const visibleLines = lines.slice(firstVisibleLine, firstVisibleLine + 3)
-  const stream = viewMode === 'recorded' && recordedStream ? recordedStream : cameraStream
-  const showingRecorded = viewMode === 'recorded' && Boolean(recordedStream)
-  const canEditRecorded = showingRecorded && Boolean(recordedStream)
-
-  function moveDetachedPrompt(event: React.PointerEvent<HTMLDivElement>) {
-    const view = event.currentTarget.ownerDocument.defaultView ?? window
-    onPromptMove({
-      x: Math.min(92, Math.max(8, (event.clientX / view.innerWidth) * 100)),
-      y: Math.min(85, Math.max(8, (event.clientY / view.innerHeight) * 100)),
-    })
-  }
-
-  useEffect(() => {
-    const video = videoRef.current
-    if (!video) return
-
-    video.srcObject = stream
-    void video.play()
-
-    return () => {
-      video.srcObject = null
-    }
-  }, [stream])
-
-  useEffect(() => {
-    if (viewMode === 'recorded' && !recordedStream) setViewMode('camera')
-  }, [recordedStream, viewMode])
-
-  return (
-    <div
-      style={{
-        background: '#111',
-        boxSizing: 'border-box',
-        color: '#fff',
-        fontFamily: 'system-ui, sans-serif',
-        height: '100vh',
-        overflow: 'hidden',
-        position: 'relative',
-        textAlign: 'center',
-        textShadow: '0 2px 14px rgb(0 0 0 / 0.75)',
-        width: '100vw',
-      }}
-    >
-      <video
-        ref={videoRef}
-        muted
-        playsInline
-        autoPlay
-        style={
-          showingRecorded
-            ? {
-                height: 'min(100vh, calc(100vw * 16 / 9))',
-                left: '50%',
-                objectFit: 'contain',
-                position: 'absolute',
-                top: '50%',
-                transform: 'translate(-50%, -50%)',
-                width: 'min(100vw, calc(100vh * 9 / 16))',
-              }
-            : {
-                height: '100%',
-                objectFit: 'cover',
-                transform: mirrorMode ? 'scaleX(-1)' : undefined,
-                width: '100%',
-              }
-        }
-      />
-      {canEditRecorded && (
-        <div
-          ref={surfaceRef}
-          style={{
-            cursor: 'grab',
-            height: 'min(100vh, calc(100vw * 16 / 9))',
-            left: '50%',
-            position: 'absolute',
-            top: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: 'min(100vw, calc(100vh * 9 / 16))',
-            zIndex: 2,
-          }}
-          onPointerDown={event => {
-            const bounds = event.currentTarget.getBoundingClientRect()
-            event.currentTarget.setPointerCapture(event.pointerId)
-            onCameraMove(event, bounds)
-          }}
-          onPointerMove={event => {
-            if (!event.currentTarget.hasPointerCapture(event.pointerId)) return
-            onCameraMove(event, event.currentTarget.getBoundingClientRect())
-          }}
-          onPointerUp={event => event.currentTarget.releasePointerCapture(event.pointerId)}
-        >
-          <div
-            style={{
-              background: 'rgb(0 0 0 / 0.45)',
-              border: '2px solid #fff',
-              borderRadius: 999,
-              cursor: 'nwse-resize',
-              height: 20,
-              left: `${cameraOverlayPosition.x + cameraOverlayWidth / 2}%`,
-              position: 'absolute',
-              top: `${cameraOverlayPosition.y + cameraOverlaySize / 2}%`,
-              transform: 'translate(-50%, -50%)',
-              width: 20,
-              zIndex: 4,
-            }}
-            onPointerDown={event => {
-              event.stopPropagation()
-              event.currentTarget.setPointerCapture(event.pointerId)
-              const bounds = surfaceRef.current?.getBoundingClientRect()
-              if (bounds) onCameraResize(event, bounds)
-            }}
-            onPointerMove={event => {
-              event.stopPropagation()
-              if (!event.currentTarget.hasPointerCapture(event.pointerId)) return
-              const bounds = surfaceRef.current?.getBoundingClientRect()
-              if (bounds) onCameraResize(event, bounds)
-            }}
-            onPointerUp={event => {
-              event.stopPropagation()
-              event.currentTarget.releasePointerCapture(event.pointerId)
-            }}
-          />
-        </div>
-      )}
-      <div
-        style={{
-          cursor: 'grab',
-          left: `${promptPosition.x}%`,
-          padding: '18px 14px',
-          position: 'absolute',
-          top: `${promptPosition.y}%`,
-          transform: 'translate(-50%, -50%)',
-          width: 'min(92vw, 760px)',
-          zIndex: 6,
-        }}
-        onPointerDown={event => {
-          event.stopPropagation()
-          event.currentTarget.setPointerCapture(event.pointerId)
-          moveDetachedPrompt(event)
-        }}
-        onPointerMove={event => {
-          if (!event.currentTarget.hasPointerCapture(event.pointerId)) return
-          event.stopPropagation()
-          moveDetachedPrompt(event)
-        }}
-        onPointerUp={event => {
-          event.stopPropagation()
-          event.currentTarget.releasePointerCapture(event.pointerId)
-        }}
-      >
-        {visibleLines.map((line, index) => {
-          const lineIndex = firstVisibleLine + index
-
-          return (
-            <p
-              key={`${line}-${lineIndex}`}
-              style={{
-                background:
-                  lineHighlight && lineIndex === currentLine ? 'rgb(0 0 0 / 0.45)' : 'transparent',
-                borderRadius: 8,
-                fontSize: Math.max(22, Math.round(fontSize * 0.82)),
-                fontWeight: 700,
-                lineHeight: `${lineHeight}px`,
-                margin: '0 auto',
-                maxWidth: '94%',
-                opacity: lineHighlight && lineIndex !== currentLine ? 0.5 : 1,
-                padding: '0 8px',
-              }}
-            >
-              {line}
-            </p>
-          )
-        })}
-      </div>
-      {phase === 'countdown' && (
-        <div
-          style={{
-            alignItems: 'center',
-            background: 'rgb(0 0 0 / 0.35)',
-            bottom: 0,
-            display: 'flex',
-            fontSize: 96,
-            fontWeight: 800,
-            justifyContent: 'center',
-            left: 0,
-            position: 'absolute',
-            right: 0,
-            top: 0,
-            zIndex: 9,
-          }}
-        >
-          {countdownLeft}
-        </div>
-      )}
-      <div
-        style={{
-          alignItems: 'center',
-          background: 'rgb(0 0 0 / 0.5)',
-          borderRadius: 14,
-          bottom: 16,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 8,
-          left: '50%',
-          padding: 8,
-          position: 'absolute',
-          transform: 'translateX(-50%)',
-          zIndex: 10,
-        }}
-      >
-        <div style={{ alignItems: 'center', display: 'flex', gap: 8 }}>
-          {(phase === 'idle' || phase === 'done') && (
-            <DetachedControlButton disabled={disabled} onClick={onStart}>
-              Start
-            </DetachedControlButton>
-          )}
-          {phase === 'recording' && (
-            <>
-              <DetachedControlButton onClick={onPause}>Pause</DetachedControlButton>
-              <DetachedControlButton danger onClick={onStop}>
-                Stop
-              </DetachedControlButton>
-            </>
-          )}
-          {phase === 'paused' && (
-            <>
-              <DetachedControlButton onClick={onResume}>Resume</DetachedControlButton>
-              <DetachedControlButton danger onClick={onStop}>
-                Stop
-              </DetachedControlButton>
-            </>
-          )}
-          {(phase === 'recording' || phase === 'paused') && (
-            <span style={{ fontFamily: 'monospace', fontSize: 14, minWidth: 42 }}>
-              {formatElapsed(recordedMs)}
-            </span>
-          )}
-        </div>
-        {recordedStream && (
-          <div style={{ display: 'flex', gap: 4 }}>
-            <DetachedControlButton
-              active={viewMode === 'camera'}
-              onClick={() => setViewMode('camera')}
-            >
-              Camera
-            </DetachedControlButton>
-            <DetachedControlButton
-              active={viewMode === 'recorded'}
-              onClick={() => setViewMode('recorded')}
-            >
-              Recorded
-            </DetachedControlButton>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
 function DetachedControlButton({
   children,
   active,
@@ -1724,86 +1731,6 @@ function DetachedControlButton({
     >
       {children}
     </button>
-  )
-}
-
-function RecorderControls({
-  phase,
-  disabled,
-  uploadDisabled,
-  recordedMs,
-  onStart,
-  onPause,
-  onResume,
-  onStop,
-  onRetake,
-  onUpload,
-}: {
-  phase: RecorderPhase
-  disabled: boolean
-  uploadDisabled: boolean
-  recordedMs: number
-  onStart: () => void
-  onPause: () => void
-  onResume: () => void
-  onStop: () => void
-  onRetake: () => void
-  onUpload: () => void
-}) {
-  return (
-    <div className="mx-auto flex w-full max-w-3xl items-center justify-center gap-2 rounded-lg border bg-card p-3">
-      {(phase === 'idle' || phase === 'done') && (
-        <Button type="button" size="lg" disabled={disabled} onClick={onStart}>
-          <Play />
-          Start
-        </Button>
-      )}
-      {phase === 'recording' && (
-        <>
-          <Button type="button" variant="outline" size="lg" onClick={onPause}>
-            <Pause />
-            Pause
-          </Button>
-          <Button type="button" variant="destructive" size="lg" onClick={onStop}>
-            <Square />
-            Stop
-          </Button>
-        </>
-      )}
-      {phase === 'paused' && (
-        <>
-          <Button type="button" size="lg" onClick={onResume}>
-            <Play />
-            Resume
-          </Button>
-          <Button type="button" variant="destructive" size="lg" onClick={onStop}>
-            <Square />
-            Stop
-          </Button>
-        </>
-      )}
-      {phase === 'review' && (
-        <>
-          <Button type="button" variant="outline" size="lg" onClick={onRetake}>
-            <RefreshCcw />
-            Retake
-          </Button>
-          <Button type="button" size="lg" disabled={uploadDisabled} onClick={onUpload}>
-            <Upload />
-            Approve
-          </Button>
-        </>
-      )}
-      {phase === 'uploading' && (
-        <Button type="button" size="lg" disabled>
-          <Upload />
-          Uploading
-        </Button>
-      )}
-      {(phase === 'recording' || phase === 'paused') && (
-        <span className="ml-2 min-w-14 font-mono text-sm">{formatElapsed(recordedMs)}</span>
-      )}
-    </div>
   )
 }
 
