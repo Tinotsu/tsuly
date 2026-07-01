@@ -84,7 +84,7 @@ function Recorder({ video }: { video: Video }) {
   const previewRef = useRef<HTMLVideoElement | null>(null)
   const screenPreviewRef = useRef<HTMLVideoElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
-  const personCanvasRef = useRef<HTMLCanvasElement | null>(null)
+  const cameraLayerCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const personMaskCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const segmenterRef = useRef<ImageSegmenter | null>(null)
   const recorderRef = useRef<MediaRecorder | null>(null)
@@ -323,11 +323,15 @@ function Recorder({ video }: { video: Video }) {
           (drawingCanvas.height * cameraOverlayPosition.y) / 100 - cameraHeight / 2,
         )
 
-        const personCanvas = personCanvasRef.current
-        if (cameraCutoutMode && segmentationReady && personCanvas) {
-          drawCameraLayer(
+        const personMaskCanvas = personMaskCanvasRef.current
+        if (cameraCutoutMode && segmentationReady && personMaskCanvas) {
+          const cameraLayerCanvas = cameraLayerCanvasRef.current ?? document.createElement('canvas')
+          cameraLayerCanvasRef.current = cameraLayerCanvas
+          drawCameraCutoutLayer(
             drawingContext,
-            personCanvas,
+            drawingCameraVideo,
+            personMaskCanvas,
+            cameraLayerCanvas,
             cameraX,
             cameraY,
             cameraWidth,
@@ -493,7 +497,7 @@ function Recorder({ video }: { video: Video }) {
 
     try {
       const result = segmenter.segmentForVideo(cameraVideo, now)
-      drawPersonCutout(result, cameraVideo)
+      drawPersonMask(result)
       result.confidenceMasks?.forEach(mask => mask.close())
       result.categoryMask?.close()
       lastSegmentationMsRef.current = now
@@ -505,23 +509,18 @@ function Recorder({ video }: { video: Video }) {
     }
   }
 
-  function drawPersonCutout(result: ImageSegmenterResult, cameraVideo: HTMLVideoElement) {
+  function drawPersonMask(result: ImageSegmenterResult) {
     const masks = result.confidenceMasks
     const mask = masks?.[personMaskIndexRef.current] ?? masks?.[masks.length - 1]
     if (!mask) return
 
     const width = mask.width
     const height = mask.height
-    const personCanvas = personCanvasRef.current ?? document.createElement('canvas')
     const maskCanvas = personMaskCanvasRef.current ?? document.createElement('canvas')
-    const personContext = personCanvas.getContext('2d')
     const maskContext = maskCanvas.getContext('2d')
-    if (!personContext || !maskContext) return
+    if (!maskContext) return
 
-    personCanvasRef.current = personCanvas
     personMaskCanvasRef.current = maskCanvas
-    personCanvas.width = width
-    personCanvas.height = height
     maskCanvas.width = width
     maskCanvas.height = height
 
@@ -532,11 +531,6 @@ function Recorder({ video }: { video: Video }) {
     }
 
     maskContext.putImageData(imageData, 0, 0)
-    personContext.clearRect(0, 0, width, height)
-    personContext.drawImage(maskCanvas, 0, 0)
-    personContext.globalCompositeOperation = 'source-in'
-    personContext.drawImage(cameraVideo, 0, 0, width, height)
-    personContext.globalCompositeOperation = 'source-over'
   }
 
   function startCountdown() {
@@ -1868,6 +1862,34 @@ function ToggleControl({
       />
     </label>
   )
+}
+
+function drawCameraCutoutLayer(
+  context: CanvasRenderingContext2D,
+  cameraVideo: HTMLVideoElement,
+  maskCanvas: HTMLCanvasElement,
+  layerCanvas: HTMLCanvasElement,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  mirrorMode: boolean,
+) {
+  const layerContext = layerCanvas.getContext('2d')
+  if (!layerContext) return
+
+  if (layerCanvas.width !== maskCanvas.width || layerCanvas.height !== maskCanvas.height) {
+    layerCanvas.width = maskCanvas.width
+    layerCanvas.height = maskCanvas.height
+  }
+
+  layerContext.clearRect(0, 0, layerCanvas.width, layerCanvas.height)
+  layerContext.drawImage(cameraVideo, 0, 0, layerCanvas.width, layerCanvas.height)
+  layerContext.globalCompositeOperation = 'destination-in'
+  layerContext.drawImage(maskCanvas, 0, 0)
+  layerContext.globalCompositeOperation = 'source-over'
+
+  drawCameraLayer(context, layerCanvas, x, y, width, height, mirrorMode)
 }
 
 function drawCameraLayer(
