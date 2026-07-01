@@ -98,7 +98,10 @@ export const updateVideoEditingSettingsValidator = vine.compile(
   vine.object({
     trimStartMs: vine.number().min(0).optional(),
     trimEndMs: vine.number().min(1).optional(),
-    captionFont: vine.enum(['sans', 'serif', 'mono'] as const).optional(),
+    captionFont: vine
+      .string()
+      .regex(/^[A-Za-z0-9 ]{1,80}$/)
+      .optional(),
     captionFontSize: vine.number().min(36).max(96).optional(),
     captionTextColor: hexColor().optional(),
     captionBackgroundEnabled: vine.boolean().optional(),

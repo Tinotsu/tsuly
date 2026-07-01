@@ -16,6 +16,7 @@ export interface ApiDefinition {
   }
   workspace: {
     show: typeof routes['workspace.show']
+    googleFonts: typeof routes['workspace.google_fonts']
     createIdea: typeof routes['workspace.create_idea']
     updateIdea: typeof routes['workspace.update_idea']
     deleteIdea: typeof routes['workspace.delete_idea']

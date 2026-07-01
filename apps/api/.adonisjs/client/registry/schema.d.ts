@@ -91,6 +91,18 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['show']>>>
     }
   }
+  'workspace.google_fonts': {
+    methods: ["GET","HEAD"]
+    pattern: '/content/google-fonts'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['googleFonts']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['googleFonts']>>>
+    }
+  }
   'workspace.create_idea': {
     methods: ["POST"]
     pattern: '/content/ideas'

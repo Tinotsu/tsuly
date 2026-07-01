@@ -6,7 +6,7 @@ export default class extends BaseSchema {
   async up() {
     this.schema.alterTable(this.tableName, table => {
       table.string('current_step').nullable()
-      table.string('caption_font').notNullable().defaultTo('sans')
+      table.string('caption_font').notNullable().defaultTo('Inter')
       table.integer('caption_font_size').notNullable().defaultTo(64)
       table.string('caption_text_color').notNullable().defaultTo('#ffffff')
       table.boolean('caption_background_enabled').notNullable().defaultTo(true)

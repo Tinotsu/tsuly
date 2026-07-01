@@ -11,6 +11,7 @@ export type ScannedRoutes = {
     'billing.checkout': { paramsTuple?: []; params?: {} }
     'billing.portal': { paramsTuple?: []; params?: {} }
     'workspace.show': { paramsTuple?: []; params?: {} }
+    'workspace.google_fonts': { paramsTuple?: []; params?: {} }
     'workspace.create_idea': { paramsTuple?: []; params?: {} }
     'workspace.update_idea': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'workspace.delete_idea': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -49,6 +50,7 @@ export type ScannedRoutes = {
   GET: {
     'auth.get_me': { paramsTuple?: []; params?: {} }
     'workspace.show': { paramsTuple?: []; params?: {} }
+    'workspace.google_fonts': { paramsTuple?: []; params?: {} }
     'workspace.download_final_video': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'auth.is_authenticated': { paramsTuple?: []; params?: {} }
     'health_checks': { paramsTuple?: []; params?: {} }
@@ -56,6 +58,7 @@ export type ScannedRoutes = {
   HEAD: {
     'auth.get_me': { paramsTuple?: []; params?: {} }
     'workspace.show': { paramsTuple?: []; params?: {} }
+    'workspace.google_fonts': { paramsTuple?: []; params?: {} }
     'workspace.download_final_video': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'auth.is_authenticated': { paramsTuple?: []; params?: {} }
     'health_checks': { paramsTuple?: []; params?: {} }

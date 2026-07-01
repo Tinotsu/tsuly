@@ -394,9 +394,19 @@ async function createCaptionOverlays(
 ) {
   const overlays: CaptionOverlay[] = []
 
+  if (!captions.length) return overlays
+
+  const fontFile = await downloadGoogleFont(settings.captionFont, outputDir)
+
   for (const [index, caption] of captions.entries()) {
     const path = join(outputDir, `caption-${index + 1}.png`)
-    const image = new Resvg(captionSvg(caption.text, settings)).render()
+    const image = new Resvg(captionSvg(caption.text, settings), {
+      font: {
+        fontFiles: [fontFile],
+        loadSystemFonts: true,
+        defaultFontFamily: captionFontFamilyName(settings.captionFont),
+      },
+    }).render()
     await writeFile(path, image.asPng())
     overlays.push({ ...caption, path })
   }
@@ -423,7 +433,7 @@ function captionSvg(text: string, settings: CaptionRenderSettings) {
   return [
     '<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="300" viewBox="0 0 1080 300">',
     background,
-    `<text font-family="${captionFontFamily(settings.captionFont)}" font-size="${fontSize}" font-weight="800" fill="${settings.captionTextColor}" text-anchor="middle">${tspans}</text>`,
+    `<text font-family="${escapeXml(captionFontFamily(settings.captionFont))}" font-size="${fontSize}" font-weight="800" fill="${settings.captionTextColor}" text-anchor="middle">${tspans}</text>`,
     '</svg>',
   ].join('')
 }
@@ -443,9 +453,51 @@ function captionOverlayY(position: string) {
 }
 
 function captionFontFamily(font: string) {
-  if (font === 'serif') return 'Georgia, Times New Roman, serif'
-  if (font === 'mono') return 'Menlo, Courier New, monospace'
-  return 'Arial, Helvetica, sans-serif'
+  const family = captionFontFamilyName(font)
+
+  if (family === 'Playfair Display') return "'Playfair Display', Georgia, serif"
+  if (family === 'Roboto Mono') return "'Roboto Mono', Menlo, monospace"
+  return `'${family}', Arial, sans-serif`
+}
+
+async function downloadGoogleFont(font: string, outputDir: string) {
+  const cssResponse = await fetch(
+    `https://fonts.googleapis.com/css2?family=${googleFontFamilyParam(captionFontFamilyName(font))}&display=swap`,
+  )
+
+  if (!cssResponse.ok) {
+    throw new Error(`Could not load Google font ${font}`)
+  }
+
+  const css = await cssResponse.text()
+  const fontUrl = css.match(/url\((https:\/\/fonts\.gstatic\.com\/[^)]+)\)/)?.[1]
+
+  if (!fontUrl) {
+    throw new Error(`Could not find Google font file for ${font}`)
+  }
+
+  const fontResponse = await fetch(fontUrl)
+
+  if (!fontResponse.ok) {
+    throw new Error(`Could not download Google font ${font}`)
+  }
+
+  const extension = fontUrl.includes('.woff2') ? 'woff2' : 'ttf'
+  const path = join(outputDir, `caption-font.${extension}`)
+  await writeFile(path, Buffer.from(await fontResponse.arrayBuffer()))
+
+  return path
+}
+
+function captionFontFamilyName(font: string) {
+  if (font === 'serif' || font === 'playfair') return 'Playfair Display'
+  if (font === 'mono' || font === 'roboto-mono') return 'Roboto Mono'
+  if (!font || font === 'sans' || font === 'inter') return 'Inter'
+  return font
+}
+
+function googleFontFamilyParam(font: string) {
+  return encodeURIComponent(font).replaceAll('%20', '+')
 }
 
 function escapeXml(value: string) {

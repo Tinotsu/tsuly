@@ -22,6 +22,7 @@ defineRouteGroup('billing', () => {
 
 defineRouteGroup('content', () => {
   router.get('workspace', [content.Workspace, 'show'])
+  router.get('google-fonts', [content.Workspace, 'googleFonts'])
   router.post('ideas', [content.Workspace, 'createIdea'])
   router.patch('ideas/:id', [content.Workspace, 'updateIdea'])
   router.delete('ideas/:id', [content.Workspace, 'deleteIdea'])

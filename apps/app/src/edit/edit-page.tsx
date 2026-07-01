@@ -1,8 +1,9 @@
-import { useMutation, useSuspenseQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useSuspenseQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import {
   ArrowLeft,
   Check,
+  ChevronDown,
   Circle,
   Download,
   LoaderCircle,
@@ -14,6 +15,12 @@ import {
 import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react'
 
 import { Button, buttonVariants } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { queryClient } from '@/lib/query_client'
@@ -22,10 +29,17 @@ import { cn } from '@/lib/utils'
 import type { Video } from '@/workspace/types'
 
 const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3333'
-const fontOptions = [
-  { value: 'sans', label: 'Sans' },
-  { value: 'serif', label: 'Serif' },
-  { value: 'mono', label: 'Mono' },
+const captionFontOptions = [
+  'Inter',
+  'Montserrat',
+  'Poppins',
+  'Oswald',
+  'Bebas Neue',
+  'Anton',
+  'Bangers',
+  'Luckiest Guy',
+  'Playfair Display',
+  'Roboto Mono',
 ] as const
 const positionOptions = [
   { value: 'top', label: 'Top' },
@@ -35,7 +49,7 @@ const positionOptions = [
 
 type EditingJob = NonNullable<Video['editingJob']>
 type Recording = Video['recordings'][number]
-type CaptionFont = (typeof fontOptions)[number]['value']
+type CaptionFont = string
 type CaptionPosition = (typeof positionOptions)[number]['value']
 type DraftSettings = Omit<EditingJob['settings'], 'captionFont' | 'captionPosition'> & {
   captionFont: CaptionFont
@@ -72,6 +86,37 @@ export function EditPage({ videoId }: { videoId: string }) {
       },
     }),
   )
+  const googleFonts = useQuery({
+    queryKey: ['google-fonts'],
+    queryFn: async () => {
+      const response = await fetch(`${apiBaseUrl}/content/google-fonts`, {
+        credentials: 'include',
+        headers: { Accept: 'application/json' },
+      })
+
+      if (!response.ok) throw new Error('Could not load Google Fonts')
+
+      const data = (await response.json()) as { fonts?: string[] }
+      return data.fonts ?? []
+    },
+    staleTime: 24 * 60 * 60 * 1000,
+  })
+  const selectedCaptionFont = captionFont(draft?.captionFont ?? '')
+  const fontOptions = useMemo(() => {
+    if (captionFontOptions.includes(selectedCaptionFont as (typeof captionFontOptions)[number])) {
+      return [...captionFontOptions]
+    }
+
+    return [selectedCaptionFont, ...captionFontOptions]
+  }, [selectedCaptionFont])
+  const searchableFontOptions = useMemo(() => {
+    const fonts = googleFonts.data ?? []
+    if (!fonts.length) return fontOptions
+    if (fonts.includes(selectedCaptionFont)) return fonts
+    return [selectedCaptionFont, ...fonts]
+  }, [fontOptions, googleFonts.data, selectedCaptionFont])
+
+  useGoogleCaptionFonts(fontOptions)
 
   useEffect(() => {
     if (editingJob && recording) setDraft(draftFrom(editingJob, recording))
@@ -215,6 +260,8 @@ export function EditPage({ videoId }: { videoId: string }) {
           <aside className="space-y-4 lg:min-h-0 lg:overflow-y-auto">
             <SettingsPanel
               draft={activeDraft}
+              fontOptions={fontOptions}
+              searchOptions={searchableFontOptions}
               disabled={!canEdit || isBusy}
               durationSeconds={durationSeconds}
               trimStartSeconds={trimStartSeconds}
@@ -311,6 +358,23 @@ function SubtitlePreview({ draft }: { draft: DraftSettings }) {
   )
 }
 
+function useGoogleCaptionFonts(fonts: string[], linkId = 'caption-google-fonts') {
+  const fontQuery = fonts.map(font => `family=${googleFontFamilyParam(font)}`).join('&')
+
+  useEffect(() => {
+    let link = document.getElementById(linkId) as HTMLLinkElement | null
+
+    if (!link) {
+      link = document.createElement('link')
+      link.id = linkId
+      link.rel = 'stylesheet'
+      document.head.append(link)
+    }
+
+    link.href = `https://fonts.googleapis.com/css2?${fontQuery}&display=swap`
+  }, [fontQuery, linkId])
+}
+
 function AutomationPanel({ editingJob }: { editingJob: EditingJob }) {
   const steps = useMemo(() => automationSteps(editingJob), [editingJob])
 
@@ -358,6 +422,8 @@ function AutomationPanel({ editingJob }: { editingJob: EditingJob }) {
 
 function SettingsPanel({
   draft,
+  fontOptions,
+  searchOptions,
   disabled,
   durationSeconds,
   trimStartSeconds,
@@ -365,6 +431,8 @@ function SettingsPanel({
   onChange,
 }: {
   draft: DraftSettings
+  fontOptions: string[]
+  searchOptions: string[]
   disabled: boolean
   durationSeconds: number
   trimStartSeconds: number
@@ -378,19 +446,13 @@ function SettingsPanel({
       <div className="mt-3 space-y-3">
         <div className="space-y-2">
           <Label>Font</Label>
-          <div className="grid grid-cols-3 gap-2">
-            {fontOptions.map(option => (
-              <Button
-                key={option.value}
-                type="button"
-                variant={draft.captionFont === option.value ? 'default' : 'outline'}
-                disabled={disabled}
-                onClick={() => updateDraft(onChange, 'captionFont', option.value)}
-              >
-                {option.label}
-              </Button>
-            ))}
-          </div>
+          <FontField
+            value={draft.captionFont}
+            options={fontOptions}
+            searchOptions={searchOptions}
+            disabled={disabled}
+            onChange={value => updateDraft(onChange, 'captionFont', value)}
+          />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -512,6 +574,99 @@ function SettingsPanel({
   )
 }
 
+function FontField({
+  value,
+  options,
+  searchOptions,
+  disabled,
+  onChange,
+}: {
+  value: string
+  options: string[]
+  searchOptions: string[]
+  disabled: boolean
+  onChange: (value: string) => void
+}) {
+  const [search, setSearch] = useState('')
+  const shownOptions = useMemo(() => {
+    const term = search.trim().toLowerCase()
+    if (!term) return options
+
+    return searchOptions
+      .filter(font => font.toLowerCase().includes(term))
+      .sort((a, b) => {
+        const aStarts = a.toLowerCase().startsWith(term)
+        const bStarts = b.toLowerCase().startsWith(term)
+        if (aStarts !== bStarts) return aStarts ? -1 : 1
+        return a.localeCompare(b)
+      })
+      .slice(0, 20)
+  }, [options, search, searchOptions])
+
+  useGoogleCaptionFonts(shownOptions, 'caption-google-font-menu')
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        type="button"
+        disabled={disabled}
+        className={cn(
+          buttonVariants({ variant: 'outline' }),
+          'h-auto w-full justify-between px-3 py-2 text-left',
+        )}
+      >
+        <span className="min-w-0">
+          <FontSample font={value} />
+        </span>
+        <ChevronDown className="size-4 opacity-70" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="max-h-72">
+        <div className="sticky top-0 z-10 bg-popover p-1">
+          <Input
+            value={search}
+            placeholder="Search fonts"
+            onClick={event => event.stopPropagation()}
+            onKeyDown={event => event.stopPropagation()}
+            onChange={event => setSearch(event.target.value)}
+          />
+        </div>
+        {shownOptions.length ? (
+          shownOptions.map(font => (
+            <DropdownMenuItem
+              key={font}
+              onClick={() => onChange(font)}
+              className={cn('px-2 py-2', font === value && 'bg-accent')}
+            >
+              <span
+                className="truncate text-xl font-bold leading-tight"
+                style={{ fontFamily: fontFamily(font) }}
+              >
+                {font}
+              </span>
+            </DropdownMenuItem>
+          ))
+        ) : (
+          <div className="px-2 py-2 text-sm text-muted-foreground">No font found</div>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+function FontSample({ font }: { font: string }) {
+  return (
+    <>
+      <span className="block text-xs font-medium text-muted-foreground">{font}</span>
+      <span
+        className="block truncate text-xl font-bold leading-tight"
+        style={{ fontFamily: fontFamily(font) }}
+      >
+        Your captions
+      </span>
+    </>
+  )
+}
+
 function NumberField({
   label,
   value,
@@ -589,8 +744,10 @@ function draftFrom(editingJob: EditingJob, recording: Recording): DraftSettings 
 }
 
 function captionFont(value: string): CaptionFont {
-  if (value === 'serif' || value === 'mono') return value
-  return 'sans'
+  if (value === 'serif' || value === 'playfair') return 'Playfair Display'
+  if (value === 'mono' || value === 'roboto-mono') return 'Roboto Mono'
+  if (!value || value === 'sans' || value === 'inter') return 'Inter'
+  return value
 }
 
 function captionPosition(value: string): CaptionPosition {
@@ -679,9 +836,11 @@ function rgba(hex: string, opacity: number) {
 }
 
 function fontFamily(font: string) {
-  if (font === 'serif') return 'Georgia, serif'
-  if (font === 'mono') return 'Menlo, monospace'
-  return 'Arial, sans-serif'
+  return `${JSON.stringify(captionFont(font))}, Arial, sans-serif`
+}
+
+function googleFontFamilyParam(font: string) {
+  return encodeURIComponent(font).replaceAll('%20', '+')
 }
 
 function lineBreakPreview(text: string) {

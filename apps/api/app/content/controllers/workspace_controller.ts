@@ -25,6 +25,23 @@ export default class WorkspaceController {
     return await serialize.withoutWrapping(workspace)
   }
 
+  async googleFonts({ serialize }: HttpContext) {
+    const response = await fetch('https://fonts.google.com/metadata/fonts')
+
+    if (!response.ok) {
+      throw new Error('Could not load Google Fonts')
+    }
+
+    const data = (await response.json()) as {
+      familyMetadataList?: Array<{ family?: string }>
+    }
+    const fonts = (data.familyMetadataList ?? [])
+      .map(font => font.family)
+      .filter((family): family is string => typeof family === 'string')
+
+    return await serialize.withoutWrapping({ fonts })
+  }
+
   async updateBrandBrainField({ auth, params, request, serialize }: HttpContext) {
     const user = auth.getUserOrFail()
     const payload = await request.validateUsing(updateBrandBrainFieldValidator)

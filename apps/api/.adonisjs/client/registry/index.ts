@@ -48,6 +48,12 @@ const routes = {
     tokens: [{"old":"/content/workspace","type":0,"val":"content","end":""},{"old":"/content/workspace","type":0,"val":"workspace","end":""}],
     types: placeholder as Registry['workspace.show']['types'],
   },
+  'workspace.google_fonts': {
+    methods: ["GET","HEAD"],
+    pattern: '/content/google-fonts',
+    tokens: [{"old":"/content/google-fonts","type":0,"val":"content","end":""},{"old":"/content/google-fonts","type":0,"val":"google-fonts","end":""}],
+    types: placeholder as Registry['workspace.google_fonts']['types'],
+  },
   'workspace.create_idea': {
     methods: ["POST"],
     pattern: '/content/ideas',

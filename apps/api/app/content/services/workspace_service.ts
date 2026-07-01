@@ -526,6 +526,7 @@ export default class WorkspaceService {
       recordingId: recording.id,
       status: 'draft',
       originalPath: payload.storagePath,
+      captionFont: 'Inter',
     })
 
     video.preview = 'Ready to edit'
