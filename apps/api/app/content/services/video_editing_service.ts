@@ -2,8 +2,7 @@ import app from '@adonisjs/core/services/app'
 import { spawn } from 'node:child_process'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { HorizontalAlign, Jimp, VerticalAlign, loadFont } from 'jimp'
-import { SANS_64_WHITE } from 'jimp/fonts'
+import { Resvg } from '@resvg/resvg-js'
 import { DateTime } from 'luxon'
 
 import env from '#start/env'
@@ -34,11 +33,20 @@ export type CaptionCue = {
   text: string
 }
 
-type CaptionImage = CaptionCue & {
+type CaptionOverlay = CaptionCue & {
   path: string
 }
 
-const silenceThresholdSeconds = 0.7
+type CaptionRenderSettings = {
+  captionFont: string
+  captionFontSize: number
+  captionTextColor: string
+  captionBackgroundEnabled: boolean
+  captionBackgroundColor: string
+  captionBackgroundOpacity: number
+  captionPosition: string
+  wordsPerCaption: number
+}
 
 export default class VideoEditingService {
   async process(editingJobId: string) {
@@ -51,6 +59,7 @@ export default class VideoEditingService {
     await mkdir(outputDir, { recursive: true })
 
     editingJob.status = 'processing'
+    editingJob.currentStep = 'normalizing'
     editingJob.startedAt = DateTime.now()
     editingJob.errorMessage = null
     await editingJob.save()
@@ -66,30 +75,41 @@ export default class VideoEditingService {
 
       await this.normalizeVideo(originalPath, normalizedPath, recording)
       editingJob.normalizedPath = `/${outputPublicDir}/normalized.mp4`
+      editingJob.currentStep = 'extracting_audio'
       await editingJob.save()
 
       await this.extractAudio(normalizedPath, audioPath)
       editingJob.audioPath = `/${outputPublicDir}/audio.wav`
+      editingJob.currentStep = 'transcribing'
       await editingJob.save()
 
       const transcript = await this.transcribeAudio(audioPath)
       await writeFile(transcriptPath, JSON.stringify(transcript, null, 2))
       editingJob.transcriptPath = `/${outputPublicDir}/transcript.json`
+      editingJob.currentStep = editingJob.removeSilence ? 'detecting_silence' : 'captioning'
       await editingJob.save()
 
-      const silences = await this.detectSilences(audioPath)
+      const silences = editingJob.removeSilence
+        ? await this.detectSilences(audioPath, editingJob.silenceThresholdSeconds)
+        : []
       await writeFile(silencePath, JSON.stringify(silences, null, 2))
 
-      const captions = captionsFromTranscript(transcript.segments ?? [], silences)
+      const captions = captionsFromTranscript(
+        transcript.segments ?? [],
+        silences,
+        editingJob.wordsPerCaption,
+      )
       await writeFile(captionsPath, formatSrt(captions))
       editingJob.captionsPath = `/${outputPublicDir}/captions.srt`
+      editingJob.currentStep = 'rendering'
       await editingJob.save()
 
-      const captionImages = await createCaptionImages(captions, outputDir)
-      await this.renderFinal(normalizedPath, finalPath, silences, captionImages)
+      const captionOverlays = await createCaptionOverlays(captions, outputDir, editingJob)
+      await this.renderFinal(normalizedPath, finalPath, silences, captionOverlays, editingJob)
 
       editingJob.finalPath = `/${outputPublicDir}/final.mp4`
       editingJob.status = 'ready'
+      editingJob.currentStep = 'done'
       editingJob.finishedAt = DateTime.now()
       await editingJob.save()
 
@@ -102,6 +122,7 @@ export default class VideoEditingService {
         .update({ done: true })
     } catch (error) {
       editingJob.status = 'failed'
+      editingJob.currentStep = 'failed'
       editingJob.errorMessage = error instanceof Error ? error.message : String(error)
       editingJob.finishedAt = DateTime.now()
       await editingJob.save()
@@ -195,13 +216,13 @@ export default class VideoEditingService {
     return (await response.json()) as WhisperTranscript
   }
 
-  private async detectSilences(audioPath: string) {
+  private async detectSilences(audioPath: string, thresholdSeconds: number) {
     const result = await runCommand(ffmpegPath(), [
       '-hide_banner',
       '-i',
       audioPath,
       '-af',
-      `silencedetect=noise=-35dB:d=${silenceThresholdSeconds}`,
+      `silencedetect=noise=-35dB:d=${thresholdSeconds}`,
       '-f',
       'null',
       '-',
@@ -214,7 +235,8 @@ export default class VideoEditingService {
     inputPath: string,
     outputPath: string,
     silences: SilenceRange[],
-    captionImages: CaptionImage[],
+    captionOverlays: CaptionOverlay[],
+    captionSettings: CaptionRenderSettings,
   ) {
     const videoFilters = [
       'scale=1080:1920:force_original_aspect_ratio=increase',
@@ -222,7 +244,7 @@ export default class VideoEditingService {
       'setsar=1',
     ]
 
-    if (silences.length === 0 && captionImages.length === 0) {
+    if (silences.length === 0 && captionOverlays.length === 0) {
       await runCommand(ffmpegPath(), [
         '-y',
         '-i',
@@ -248,7 +270,7 @@ export default class VideoEditingService {
       return
     }
 
-    const inputArgs = captionImages.flatMap(caption => ['-loop', '1', '-i', caption.path])
+    const inputArgs = captionOverlays.flatMap(caption => ['-loop', '1', '-i', caption.path])
     const filterParts: string[] = []
     let audioMap = '0:a'
 
@@ -264,10 +286,10 @@ export default class VideoEditingService {
     }
 
     let videoMap = 'v0'
-    for (const [index, caption] of captionImages.entries()) {
-      const nextVideoMap = index === captionImages.length - 1 ? 'v' : `v${index + 1}`
+    for (const [index, caption] of captionOverlays.entries()) {
+      const nextVideoMap = index === captionOverlays.length - 1 ? 'v' : `v${index + 1}`
       filterParts.push(
-        `[${videoMap}][${index + 1}:v]overlay=0:H-h-170:enable='between(t\\,${caption.start.toFixed(3)}\\,${caption.end.toFixed(3)})'[${nextVideoMap}]`,
+        `[${videoMap}][${index + 1}:v]overlay=0:${captionOverlayY(captionSettings.captionPosition)}:enable='between(t\\,${caption.start.toFixed(3)}\\,${caption.end.toFixed(3)})'[${nextVideoMap}]`,
       )
       videoMap = nextVideoMap
     }
@@ -329,17 +351,21 @@ export function parseSilenceDetect(output: string) {
   return silences.filter(silence => silence.end > silence.start)
 }
 
-export function captionsFromTranscript(segments: TranscriptSegment[], silences: SilenceRange[]) {
+export function captionsFromTranscript(
+  segments: TranscriptSegment[],
+  silences: SilenceRange[],
+  wordsPerCaption = 8,
+) {
   const captions: CaptionCue[] = []
 
   for (const segment of segments) {
     const words = segment.text.trim().split(/\s+/).filter(Boolean)
-    const chunkCount = Math.max(1, Math.ceil(words.length / 8))
+    const chunkCount = Math.max(1, Math.ceil(words.length / wordsPerCaption))
 
     for (let index = 0; index < chunkCount; index += 1) {
       const chunkStart = segment.start + ((segment.end - segment.start) * index) / chunkCount
       const chunkEnd = segment.start + ((segment.end - segment.start) * (index + 1)) / chunkCount
-      const text = words.slice(index * 8, (index + 1) * 8).join(' ')
+      const text = words.slice(index * wordsPerCaption, (index + 1) * wordsPerCaption).join(' ')
       const start = chunkStart - removedSecondsAt(chunkStart, silences)
       const end = chunkEnd - removedSecondsAt(chunkEnd, silences)
 
@@ -361,34 +387,73 @@ export function formatSrt(captions: CaptionCue[]) {
     .join('\n')
 }
 
-async function createCaptionImages(captions: CaptionCue[], outputDir: string) {
-  const font = await loadFont(SANS_64_WHITE)
-  const images: CaptionImage[] = []
+async function createCaptionOverlays(
+  captions: CaptionCue[],
+  outputDir: string,
+  settings: CaptionRenderSettings,
+) {
+  const overlays: CaptionOverlay[] = []
 
   for (const [index, caption] of captions.entries()) {
-    const path = join(outputDir, `caption-${index + 1}.png`) as `${string}.png`
-    const image = new Jimp({ width: 1080, height: 260, color: 0x00000000 })
-    const box = new Jimp({ width: 940, height: 180, color: 0x000000aa })
-
-    image.composite(box, 70, 40)
-    image.print({
-      font,
-      x: 110,
-      y: 58,
-      text: {
-        text: caption.text,
-        alignmentX: HorizontalAlign.CENTER,
-        alignmentY: VerticalAlign.MIDDLE,
-      },
-      maxWidth: 860,
-      maxHeight: 140,
-    })
-
-    await image.write(path)
-    images.push({ ...caption, path })
+    const path = join(outputDir, `caption-${index + 1}.png`)
+    const image = new Resvg(captionSvg(caption.text, settings)).render()
+    await writeFile(path, image.asPng())
+    overlays.push({ ...caption, path })
   }
 
-  return images
+  return overlays
+}
+
+function captionSvg(text: string, settings: CaptionRenderSettings) {
+  const lines = captionLines(text)
+  const fontSize = settings.captionFontSize
+  const lineHeight = Math.round(fontSize * 1.12)
+  const blockHeight = lines.length * lineHeight
+  const firstLineY = 150 - blockHeight / 2 + fontSize * 0.8
+  const background = settings.captionBackgroundEnabled
+    ? `<rect x="70" y="40" width="940" height="220" fill="${settings.captionBackgroundColor}" fill-opacity="${(settings.captionBackgroundOpacity / 100).toFixed(2)}" />`
+    : ''
+  const tspans = lines
+    .map(
+      (line, index) =>
+        `<tspan x="540" y="${Math.round(firstLineY + index * lineHeight)}">${escapeXml(line)}</tspan>`,
+    )
+    .join('')
+
+  return [
+    '<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="300" viewBox="0 0 1080 300">',
+    background,
+    `<text font-family="${captionFontFamily(settings.captionFont)}" font-size="${fontSize}" font-weight="800" fill="${settings.captionTextColor}" text-anchor="middle">${tspans}</text>`,
+    '</svg>',
+  ].join('')
+}
+
+function captionLines(text: string) {
+  const words = text.trim().split(/\s+/).filter(Boolean)
+  if (words.length <= 4) return [words.join(' ')]
+
+  const midpoint = Math.ceil(words.length / 2)
+  return [words.slice(0, midpoint).join(' '), words.slice(midpoint).join(' ')]
+}
+
+function captionOverlayY(position: string) {
+  if (position === 'top') return '170'
+  if (position === 'middle') return '(H-h)/2'
+  return 'H-h-210'
+}
+
+function captionFontFamily(font: string) {
+  if (font === 'serif') return 'Georgia, Times New Roman, serif'
+  if (font === 'mono') return 'Menlo, Courier New, monospace'
+  return 'Arial, Helvetica, sans-serif'
+}
+
+function escapeXml(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
 }
 
 function removedSecondsAt(time: number, silences: SilenceRange[]) {

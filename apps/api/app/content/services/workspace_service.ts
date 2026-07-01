@@ -8,8 +8,24 @@ import Video from '../models/video.ts'
 import VideoEditingJob from '../models/video_editing_job.ts'
 import VideoRecording from '../models/video_recording.ts'
 import ScriptGeneratorService, { type VideoScript } from './script_generator_service.ts'
+import { enqueueVideoEditingJob } from './video_editing_queue.ts'
 
 const scriptGenerator = new ScriptGeneratorService()
+
+type VideoEditingSettingsPayload = {
+  trimStartMs?: number
+  trimEndMs?: number
+  captionFont?: string
+  captionFontSize?: number
+  captionTextColor?: string
+  captionBackgroundEnabled?: boolean
+  captionBackgroundColor?: string
+  captionBackgroundOpacity?: number
+  captionPosition?: string
+  wordsPerCaption?: number
+  removeSilence?: boolean
+  silenceThresholdSeconds?: number
+}
 
 const defaultWorkspace = {
   ideas: [
@@ -508,11 +524,11 @@ export default class WorkspaceService {
     const editingJob = await VideoEditingJob.create({
       videoId: video.id,
       recordingId: recording.id,
-      status: 'queued',
+      status: 'draft',
       originalPath: payload.storagePath,
     })
 
-    video.preview = 'Auto-edit queued'
+    video.preview = 'Ready to edit'
     await video.save()
 
     const updatedVideo = await this.getVideo(userId, video.id)
@@ -529,6 +545,74 @@ export default class WorkspaceService {
       },
       video: this.serializeVideo(updatedVideo),
     }
+  }
+
+  async updateVideoEditingSettings(
+    userId: string,
+    editingJobId: string,
+    payload: VideoEditingSettingsPayload,
+  ) {
+    const editingJob = await this.getVideoEditingJob(userId, editingJobId)
+
+    if (editingJob.status !== 'draft') {
+      throw new Error('Editing settings can only be changed before rendering starts')
+    }
+
+    const recording = await VideoRecording.findOrFail(editingJob.recordingId)
+    if (payload.trimStartMs !== undefined) recording.trimStartMs = payload.trimStartMs
+    if (payload.trimEndMs !== undefined) recording.trimEndMs = payload.trimEndMs
+    await recording.save()
+
+    if (payload.captionFont !== undefined) editingJob.captionFont = payload.captionFont
+    if (payload.captionFontSize !== undefined) editingJob.captionFontSize = payload.captionFontSize
+    if (payload.captionTextColor !== undefined)
+      editingJob.captionTextColor = payload.captionTextColor
+    if (payload.captionBackgroundEnabled !== undefined) {
+      editingJob.captionBackgroundEnabled = payload.captionBackgroundEnabled
+    }
+    if (payload.captionBackgroundColor !== undefined) {
+      editingJob.captionBackgroundColor = payload.captionBackgroundColor
+    }
+    if (payload.captionBackgroundOpacity !== undefined) {
+      editingJob.captionBackgroundOpacity = payload.captionBackgroundOpacity
+    }
+    if (payload.captionPosition !== undefined) editingJob.captionPosition = payload.captionPosition
+    if (payload.wordsPerCaption !== undefined) editingJob.wordsPerCaption = payload.wordsPerCaption
+    if (payload.removeSilence !== undefined) editingJob.removeSilence = payload.removeSilence
+    if (payload.silenceThresholdSeconds !== undefined) {
+      editingJob.silenceThresholdSeconds = payload.silenceThresholdSeconds
+    }
+    await editingJob.save()
+
+    return this.serializeVideo(await this.getVideo(userId, editingJob.videoId))
+  }
+
+  async startVideoEditingJob(userId: string, editingJobId: string) {
+    const editingJob = await this.getVideoEditingJob(userId, editingJobId)
+
+    if (editingJob.status !== 'draft' && editingJob.status !== 'failed') {
+      throw new Error('Editing job has already started')
+    }
+
+    editingJob.status = 'queued'
+    editingJob.currentStep = 'queued'
+    editingJob.normalizedPath = null
+    editingJob.audioPath = null
+    editingJob.transcriptPath = null
+    editingJob.captionsPath = null
+    editingJob.finalPath = null
+    editingJob.errorMessage = null
+    editingJob.startedAt = null
+    editingJob.finishedAt = null
+    await editingJob.save()
+
+    const video = await Video.findOrFail(editingJob.videoId)
+    video.preview = 'Auto-edit queued'
+    await video.save()
+
+    await enqueueVideoEditingJob(editingJob.id)
+
+    return this.serializeVideo(await this.getVideo(userId, editingJob.videoId))
   }
 
   async deleteVideoRecording(userId: string, videoId: string, recordingId: string) {
@@ -671,13 +755,33 @@ export default class WorkspaceService {
         storagePath: recording.storagePath,
         takeId: recording.takeId,
         durationMs: recording.durationMs,
+        trimStartMs: recording.trimStartMs,
+        trimEndMs: recording.trimEndMs,
         createdAt: recording.createdAt.toISO(),
       })),
       editingJob: editingJob
         ? {
             id: editingJob.id,
+            recordingId: editingJob.recordingId,
             status: editingJob.status,
+            currentStep: editingJob.currentStep,
+            normalizedPath: editingJob.normalizedPath,
+            audioPath: editingJob.audioPath,
+            transcriptPath: editingJob.transcriptPath,
+            captionsPath: editingJob.captionsPath,
             finalPath: editingJob.finalPath,
+            settings: {
+              captionFont: editingJob.captionFont,
+              captionFontSize: editingJob.captionFontSize,
+              captionTextColor: editingJob.captionTextColor,
+              captionBackgroundEnabled: editingJob.captionBackgroundEnabled,
+              captionBackgroundColor: editingJob.captionBackgroundColor,
+              captionBackgroundOpacity: editingJob.captionBackgroundOpacity,
+              captionPosition: editingJob.captionPosition,
+              wordsPerCaption: editingJob.wordsPerCaption,
+              removeSilence: editingJob.removeSilence,
+              silenceThresholdSeconds: editingJob.silenceThresholdSeconds,
+            },
             errorMessage: editingJob.errorMessage,
           }
         : null,
@@ -714,6 +818,16 @@ export default class WorkspaceService {
       .preload('editing', query => query.orderBy('sort_order'))
       .preload('editingJobs', query => query.orderBy('created_at', 'desc'))
       .firstOrFail()
+  }
+
+  private async getVideoEditingJob(userId: string, editingJobId: string) {
+    const video = await Video.query()
+      .where('user_id', userId)
+      .whereHas('editingJobs', query => query.where('id', editingJobId))
+      .preload('editingJobs', query => query.where('id', editingJobId))
+      .firstOrFail()
+
+    return video.editingJobs[0]!
   }
 
   private async createDefaultWorkspace(userId: string) {

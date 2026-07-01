@@ -199,6 +199,30 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['uploadRecording']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
   }
+  'workspace.update_video_editing_settings': {
+    methods: ["PATCH"]
+    pattern: '/content/editing-jobs/:id/settings'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#app/content/validators/workspace').updateVideoEditingSettingsValidator)>>
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#app/content/validators/workspace').updateVideoEditingSettingsValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['updateVideoEditingSettings']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['updateVideoEditingSettings']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'workspace.start_video_editing_job': {
+    methods: ["POST"]
+    pattern: '/content/editing-jobs/:id/start'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['startVideoEditingJob']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['startVideoEditingJob']>>>
+    }
+  }
   'workspace.download_final_video': {
     methods: ["GET","HEAD"]
     pattern: '/content/videos/:id/final.mp4'

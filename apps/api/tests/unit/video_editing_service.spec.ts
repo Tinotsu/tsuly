@@ -39,6 +39,25 @@ test.group('video editing service', () => {
     ])
   })
 
+  test('chunks captions with configured word count', ({ assert }) => {
+    const captions = captionsFromTranscript(
+      [
+        {
+          start: 0,
+          end: 6,
+          text: 'one two three four five six',
+        },
+      ],
+      [],
+      3,
+    )
+
+    assert.deepEqual(captions, [
+      { start: 0, end: 3, text: 'one two three' },
+      { start: 3, end: 6, text: 'four five six' },
+    ])
+  })
+
   test('formats srt captions', ({ assert }) => {
     assert.equal(
       formatSrt([{ start: 0, end: 2.5, text: 'Hello there' }]),

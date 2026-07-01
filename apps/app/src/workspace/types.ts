@@ -23,12 +23,32 @@ export type Workspace = {
       storagePath: string | null
       takeId: string | null
       durationMs: number | null
+      trimStartMs: number | null
+      trimEndMs: number | null
       createdAt: string | null
     }>
     editingJob: {
       id: string
-      status: 'queued' | 'processing' | 'ready' | 'failed'
+      recordingId: string
+      status: 'draft' | 'queued' | 'processing' | 'ready' | 'failed'
+      currentStep: string | null
+      normalizedPath: string | null
+      audioPath: string | null
+      transcriptPath: string | null
+      captionsPath: string | null
       finalPath: string | null
+      settings: {
+        captionFont: string
+        captionFontSize: number
+        captionTextColor: string
+        captionBackgroundEnabled: boolean
+        captionBackgroundColor: string
+        captionBackgroundOpacity: number
+        captionPosition: string
+        wordsPerCaption: number
+        removeSilence: boolean
+        silenceThresholdSeconds: number
+      }
       errorMessage: string | null
     } | null
     editing: Array<{ label: string; done: boolean }>

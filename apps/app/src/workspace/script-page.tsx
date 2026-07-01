@@ -44,12 +44,14 @@ export function ScriptPage({ videoId }: { videoId: string }) {
     )
   }
 
+  const currentVideo = video
+
   function updateDraft(field: keyof Script, value: string) {
     setDraftScript(current => (current ? { ...current, [field]: value } : current))
   }
 
   function saveField(field: EditableScriptField) {
-    if (!draftScript || draftScript[field] === video.script[field]) return
+    if (!draftScript || draftScript[field] === currentVideo.script[field]) return
 
     const body =
       field === 'hook'
@@ -59,7 +61,7 @@ export function ScriptPage({ videoId }: { videoId: string }) {
           : { onScreenText: draftScript.onScreenText }
 
     saveScript.mutate(
-      { params: { id: video.id }, body },
+      { params: { id: currentVideo.id }, body },
       {
         onSuccess: async result => {
           setDraftScript(result.video.script)
@@ -78,7 +80,7 @@ export function ScriptPage({ videoId }: { videoId: string }) {
     setMessages(current => [...current, { role: 'you', content: trimmed }])
     setChatInput('')
     chatScript.mutate(
-      { params: { id: video.id }, body: { message: trimmed } },
+      { params: { id: currentVideo.id }, body: { message: trimmed } },
       {
         onSuccess: async result => {
           setDraftScript(result.video.script)
@@ -107,11 +109,11 @@ export function ScriptPage({ videoId }: { videoId: string }) {
               <ArrowLeft className="size-4" />
               Videos
             </Link>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight">{video.title}</h1>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight">{currentVideo.title}</h1>
           </div>
           <Link
             to="/videos/$videoId/record"
-            params={{ videoId: video.id }}
+            params={{ videoId: currentVideo.id }}
             className={buttonVariants({ variant: 'outline' })}
           >
             <Video />

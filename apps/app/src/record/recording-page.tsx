@@ -1,6 +1,6 @@
 import { FilesetResolver, ImageSegmenter, type ImageSegmenterResult } from '@mediapipe/tasks-vision'
 import { useSuspenseQuery } from '@tanstack/react-query'
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { ArrowLeft } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -55,6 +55,7 @@ export function RecordingPage({ videoId }: { videoId: string }) {
 }
 
 function Recorder({ video }: { video: Video }) {
+  const navigate = useNavigate()
   const previewRef = useRef<HTMLVideoElement | null>(null)
   const screenPreviewRef = useRef<HTMLVideoElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -692,6 +693,7 @@ function Recorder({ video }: { video: Video }) {
       queryKey: query.workspace.show.queryOptions({}).queryKey,
     })
     setPhase('done')
+    await navigate({ to: '/videos/$videoId/edit', params: { videoId: video.id } })
   }
 
   function currentRecordingMs() {

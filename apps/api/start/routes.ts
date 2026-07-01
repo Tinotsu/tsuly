@@ -31,6 +31,8 @@ defineRouteGroup('content', () => {
   router.patch('videos/:id/script', [content.Workspace, 'updateVideoScript'])
   router.post('videos/:id/script/chat', [content.Workspace, 'chatVideoScript'])
   router.post('videos/:id/recordings', [content.Workspace, 'uploadRecording'])
+  router.patch('editing-jobs/:id/settings', [content.Workspace, 'updateVideoEditingSettings'])
+  router.post('editing-jobs/:id/start', [content.Workspace, 'startVideoEditingJob'])
   router.get('videos/:id/final.mp4', [content.Workspace, 'downloadFinalVideo'])
   router.delete('videos/:videoId/recordings/:recordingId', [content.Workspace, 'deleteRecording'])
   router.patch('brand-brain-fields/:id', [content.Workspace, 'updateBrandBrainField'])

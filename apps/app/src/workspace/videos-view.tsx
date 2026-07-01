@@ -11,6 +11,7 @@ import {
   Mic2,
   Plus,
   Send,
+  SlidersHorizontal,
   Trash2,
   X,
 } from 'lucide-react'
@@ -102,6 +103,16 @@ export function VideosView({ videos }: { videos: Video[] }) {
                   <FileText />
                   Script
                 </Link>
+                {video.recordings.length > 0 || video.editingJob ? (
+                  <Link
+                    to="/videos/$videoId/edit"
+                    params={{ videoId: video.id }}
+                    className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'self-start')}
+                  >
+                    <SlidersHorizontal />
+                    Edit
+                  </Link>
+                ) : null}
               </div>
             ))
           ) : (
@@ -234,6 +245,8 @@ function VideoDetailModal({
                     <span className="text-destructive">
                       {video.editingJob.errorMessage || 'Render failed'}
                     </span>
+                  ) : video.editingJob?.status === 'draft' ? (
+                    'Edit settings ready'
                   ) : video.editingJob?.status === 'processing' ? (
                     'Rendering final MP4'
                   ) : video.editingJob?.status === 'queued' ? (
@@ -281,6 +294,16 @@ function VideoDetailModal({
             <Mic2 />
             Record
           </Link>
+          {video.recordings.length > 0 || video.editingJob ? (
+            <Link
+              to="/videos/$videoId/edit"
+              params={{ videoId: video.id }}
+              className={buttonVariants({ variant: 'outline' })}
+            >
+              <SlidersHorizontal />
+              Edit
+            </Link>
+          ) : null}
           {finalVideoUrl ? (
             <Button type="button" onClick={() => setPublishOpen(true)}>
               <Send />

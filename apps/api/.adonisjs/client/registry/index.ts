@@ -102,6 +102,18 @@ const routes = {
     tokens: [{"old":"/content/videos/:id/recordings","type":0,"val":"content","end":""},{"old":"/content/videos/:id/recordings","type":0,"val":"videos","end":""},{"old":"/content/videos/:id/recordings","type":1,"val":"id","end":""},{"old":"/content/videos/:id/recordings","type":0,"val":"recordings","end":""}],
     types: placeholder as Registry['workspace.upload_recording']['types'],
   },
+  'workspace.update_video_editing_settings': {
+    methods: ["PATCH"],
+    pattern: '/content/editing-jobs/:id/settings',
+    tokens: [{"old":"/content/editing-jobs/:id/settings","type":0,"val":"content","end":""},{"old":"/content/editing-jobs/:id/settings","type":0,"val":"editing-jobs","end":""},{"old":"/content/editing-jobs/:id/settings","type":1,"val":"id","end":""},{"old":"/content/editing-jobs/:id/settings","type":0,"val":"settings","end":""}],
+    types: placeholder as Registry['workspace.update_video_editing_settings']['types'],
+  },
+  'workspace.start_video_editing_job': {
+    methods: ["POST"],
+    pattern: '/content/editing-jobs/:id/start',
+    tokens: [{"old":"/content/editing-jobs/:id/start","type":0,"val":"content","end":""},{"old":"/content/editing-jobs/:id/start","type":0,"val":"editing-jobs","end":""},{"old":"/content/editing-jobs/:id/start","type":1,"val":"id","end":""},{"old":"/content/editing-jobs/:id/start","type":0,"val":"start","end":""}],
+    types: placeholder as Registry['workspace.start_video_editing_job']['types'],
+  },
   'workspace.download_final_video': {
     methods: ["GET","HEAD"],
     pattern: '/content/videos/:id/final.mp4',

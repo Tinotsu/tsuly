@@ -24,6 +24,8 @@ const cardText = () =>
     .nullable()
     .transform(value => value ?? '')
 
+const hexColor = () => vine.string().regex(/^#[0-9a-fA-F]{6}$/)
+
 export const updateBrandBrainFieldValidator = vine.compile(
   vine.object({
     label: vine.string().nullable().optional(),
@@ -89,5 +91,22 @@ export const createVideoRecordingValidator = vine.compile(
     durationMs: vine.string(),
     trimStartMs: vine.string().optional(),
     trimEndMs: vine.string().optional(),
+  }),
+)
+
+export const updateVideoEditingSettingsValidator = vine.compile(
+  vine.object({
+    trimStartMs: vine.number().min(0).optional(),
+    trimEndMs: vine.number().min(1).optional(),
+    captionFont: vine.enum(['sans', 'serif', 'mono'] as const).optional(),
+    captionFontSize: vine.number().min(36).max(96).optional(),
+    captionTextColor: hexColor().optional(),
+    captionBackgroundEnabled: vine.boolean().optional(),
+    captionBackgroundColor: hexColor().optional(),
+    captionBackgroundOpacity: vine.number().min(0).max(100).optional(),
+    captionPosition: vine.enum(['top', 'middle', 'bottom'] as const).optional(),
+    wordsPerCaption: vine.number().min(3).max(12).optional(),
+    removeSilence: vine.boolean().optional(),
+    silenceThresholdSeconds: vine.number().min(0.2).max(2).optional(),
   }),
 )

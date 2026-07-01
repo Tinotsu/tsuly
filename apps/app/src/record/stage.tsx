@@ -430,9 +430,9 @@ export function RecordingStage({
 
       {!isFullscreen && phase === 'done' && (
         <div className="absolute inset-x-4 bottom-20 z-20 rounded-lg bg-white p-4 text-left text-sm text-[#111] shadow">
-          <p className="font-medium">Take uploaded. Auto-edit queued.</p>
+          <p className="font-medium">Take uploaded. Edit settings ready.</p>
           <p className="mt-1 text-muted-foreground">
-            Captions, silence removal, cuts, and export will run server-side.
+            Choose caption and trim settings before starting the server-side edit.
           </p>
         </div>
       )}

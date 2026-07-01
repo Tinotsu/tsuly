@@ -3,13 +3,13 @@ import app from '@adonisjs/core/services/app'
 import { createReadStream } from 'node:fs'
 
 import WorkspaceService from '../services/workspace_service.ts'
-import { enqueueVideoEditingJob } from '../services/video_editing_queue.ts'
 import {
   chatVideoScriptValidator,
   createBrandBrainFieldValidator,
   createIdeaValidator,
   createVideoValidator,
   createVideoRecordingValidator,
+  updateVideoEditingSettingsValidator,
   updateBrandBrainFieldValidator,
   updateIdeaValidator,
   updateVideoScriptValidator,
@@ -158,9 +158,31 @@ export default class WorkspaceController {
       stoppedAt: payload.stoppedAt,
     })
 
-    await enqueueVideoEditingJob(result.editingJob.id)
-
     return await serialize.withoutWrapping(result)
+  }
+
+  async updateVideoEditingSettings({ auth, params, request, response, serialize }: HttpContext) {
+    const user = auth.getUserOrFail()
+    const payload = await request.validateUsing(updateVideoEditingSettingsValidator)
+
+    if (
+      payload.trimStartMs !== undefined &&
+      payload.trimEndMs !== undefined &&
+      payload.trimEndMs <= payload.trimStartMs
+    ) {
+      return response.unprocessableEntity({ message: 'Invalid recording timing' })
+    }
+
+    const video = await workspaceService.updateVideoEditingSettings(user.id, params.id, payload)
+
+    return await serialize.withoutWrapping(video)
+  }
+
+  async startVideoEditingJob({ auth, params, serialize }: HttpContext) {
+    const user = auth.getUserOrFail()
+    const video = await workspaceService.startVideoEditingJob(user.id, params.id)
+
+    return await serialize.withoutWrapping(video)
   }
 
   async deleteRecording({ auth, params, serialize }: HttpContext) {

@@ -162,8 +162,16 @@ export class UserSchema extends BaseModel {
 export class VideoEditingJobSchema extends BaseModel {
   static $columns = [
     'audioPath',
+    'captionBackgroundColor',
+    'captionBackgroundEnabled',
+    'captionBackgroundOpacity',
+    'captionFont',
+    'captionFontSize',
+    'captionPosition',
+    'captionTextColor',
     'captionsPath',
     'createdAt',
+    'currentStep',
     'errorMessage',
     'finalPath',
     'finishedAt',
@@ -171,19 +179,38 @@ export class VideoEditingJobSchema extends BaseModel {
     'normalizedPath',
     'originalPath',
     'recordingId',
+    'removeSilence',
+    'silenceThresholdSeconds',
     'startedAt',
     'status',
     'transcriptPath',
     'updatedAt',
     'videoId',
+    'wordsPerCaption',
   ] as const
   $columns = VideoEditingJobSchema.$columns
   @column()
   declare audioPath: string | null
   @column()
+  declare captionBackgroundColor: string
+  @column()
+  declare captionBackgroundEnabled: boolean
+  @column()
+  declare captionBackgroundOpacity: number
+  @column()
+  declare captionFont: string
+  @column()
+  declare captionFontSize: number
+  @column()
+  declare captionPosition: string
+  @column()
+  declare captionTextColor: string
+  @column()
   declare captionsPath: string | null
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
+  @column()
+  declare currentStep: string | null
   @column()
   declare errorMessage: string | null
   @column()
@@ -198,6 +225,10 @@ export class VideoEditingJobSchema extends BaseModel {
   declare originalPath: string
   @column()
   declare recordingId: string
+  @column()
+  declare removeSilence: boolean
+  @column()
+  declare silenceThresholdSeconds: number
   @column.dateTime()
   declare startedAt: DateTime | null
   @column()
@@ -208,6 +239,8 @@ export class VideoEditingJobSchema extends BaseModel {
   declare updatedAt: DateTime | null
   @column()
   declare videoId: string
+  @column()
+  declare wordsPerCaption: number
 }
 
 export class VideoEditingTaskSchema extends BaseModel {
