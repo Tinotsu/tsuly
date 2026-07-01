@@ -8,7 +8,6 @@ import {
   PanelTopClose,
   PanelTopOpen,
   RefreshCcw,
-  RotateCcw,
   ScreenShare,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -114,7 +113,7 @@ function Recorder({ video }: { video: Video }) {
   const [phase, setPhase] = useState<RecorderPhase>('idle')
   const [permissionError, setPermissionError] = useState('')
   const [cameraReady, setCameraReady] = useState(false)
-  const [screenMode, setScreenMode] = useState(savedRecorderSettings.screenMode ?? false)
+  const [screenMode, setScreenMode] = useState(false)
   const [screenReady, setScreenReady] = useState(false)
   const [screenError, setScreenError] = useState('')
   const [recordedPreviewStream, setRecordedPreviewStream] = useState<MediaStream | null>(null)
@@ -199,7 +198,6 @@ function Recorder({ video }: { video: Video }) {
         scrollSpeed,
         mirrorMode,
         lineHighlight,
-        screenMode,
         cameraCutoutMode,
         cameraOverlaySize,
         cameraOverlayPosition,
@@ -215,7 +213,6 @@ function Recorder({ video }: { video: Video }) {
     scrollSpeed,
     mirrorMode,
     lineHighlight,
-    screenMode,
     cameraCutoutMode,
     cameraOverlaySize,
     cameraOverlayPosition,
@@ -810,7 +807,6 @@ function Recorder({ video }: { video: Video }) {
             setManualOverride(true)
             setManualLine(value)
           }}
-          onAutoScroll={() => setManualOverride(false)}
           detachedPrompterMode={detachedPrompterMode}
           detachPrompterError={detachPrompterError}
           videoDetachDisabled={recordingDisabled}
@@ -943,7 +939,6 @@ function TeleprompterControls({
   onCameraOverlaySizeChange,
   onScreenZoomChange,
   onManualLineChange,
-  onAutoScroll,
   detachedPrompterMode,
   detachPrompterError,
   videoDetachDisabled,
@@ -977,7 +972,6 @@ function TeleprompterControls({
   onCameraOverlaySizeChange: (value: number) => void
   onScreenZoomChange: (value: number) => void
   onManualLineChange: (value: number) => void
-  onAutoScroll: () => void
   detachedPrompterMode: DetachedPrompterMode | null
   detachPrompterError: string
   videoDetachDisabled: boolean
@@ -1036,10 +1030,6 @@ function TeleprompterControls({
           disabled={disabled}
           onChange={onManualLineChange}
         />
-        <Button type="button" variant="outline" className="w-full" onClick={onAutoScroll}>
-          <RotateCcw />
-          Auto scroll
-        </Button>
         <div className="space-y-3 rounded-lg border bg-muted/30 p-3 has-[.record-screen-info:hover]:[&_.record-screen-info-panel]:block has-[.record-screen-info-panel:hover]:[&_.record-screen-info-panel]:block">
           <div className="flex items-center justify-between gap-3 text-sm font-medium">
             <div className="flex items-center gap-2">
