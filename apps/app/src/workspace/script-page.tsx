@@ -165,13 +165,6 @@ export function ScriptPage({ videoId }: { videoId: string }) {
               onSave={() => saveField('onScreenText')}
               onChange={value => updateDraft('onScreenText', value)}
             />
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <ScriptTextBlock title="Shot list">{draftScript.shotList}</ScriptTextBlock>
-              <ScriptTextBlock title="Recording notes">
-                {draftScript.recordingNotes}
-              </ScriptTextBlock>
-            </div>
           </section>
 
           <aside className="flex h-[calc(100vh-12rem)] min-h-[520px] flex-col rounded-lg border bg-card lg:sticky lg:top-20">
@@ -273,17 +266,6 @@ function EditableScriptBlock({
           !editing && 'text-muted-foreground',
         )}
       />
-    </div>
-  )
-}
-
-function ScriptTextBlock({ title, children }: { title: string; children: string }) {
-  return (
-    <div className="rounded-lg border bg-card p-4">
-      <h2 className="text-base font-semibold">{title}</h2>
-      <p className="mt-3 min-h-40 whitespace-pre-line text-sm leading-6 text-muted-foreground">
-        {children}
-      </p>
     </div>
   )
 }

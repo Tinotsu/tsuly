@@ -15,9 +15,7 @@ export type Workspace = {
     script: {
       hook: string
       spokenScript: string
-      shotList: string
       onScreenText: string
-      recordingNotes: string
     }
     recordings: Array<{
       id: string

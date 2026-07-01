@@ -5,9 +5,7 @@ import ScriptGeneratorService from '#app/content/services/script_generator_servi
 const generatedScript = {
   hook: 'Hook',
   spokenScript: 'Spoken script',
-  shotList: 'Shot list',
   onScreenText: 'On-screen text',
-  recordingNotes: 'Recording notes',
 }
 
 test.group('script generator service', () => {

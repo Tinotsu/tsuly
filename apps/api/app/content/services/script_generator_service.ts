@@ -3,9 +3,7 @@ import env from '#start/env'
 export type VideoScript = {
   hook: string
   spokenScript: string
-  shotList: string
   onScreenText: string
-  recordingNotes: string
 }
 
 type ScriptGeneratorConfig = {
@@ -41,7 +39,7 @@ export default class ScriptGeneratorService {
       {
         role: 'system',
         content:
-          'You write short-form creator scripts. Return only JSON with string keys: hook, spokenScript, shotList, onScreenText, recordingNotes.',
+          'You write short-form creator scripts. Return only JSON with string keys: hook, spokenScript, onScreenText.',
       },
       {
         role: 'user',
@@ -50,9 +48,7 @@ export default class ScriptGeneratorService {
           'Every JSON value must be a string. For lists, use one newline-separated string, not an array.',
           'Hook must be the first 2-3 seconds.',
           'spokenScript is exactly what the creator reads.',
-          'shotList is optional visuals/B-roll, but include useful scenes when relevant.',
           'onScreenText is the text appearing in the video.',
-          'recordingNotes are delivery notes, not part of the script.',
           '',
           `Title: ${input.title}`,
           `Idea: ${input.idea}`,
@@ -74,7 +70,7 @@ export default class ScriptGeneratorService {
         {
           role: 'system',
           content:
-            'You revise short-form creator scripts. Return only JSON with string keys: hook, spokenScript, shotList, onScreenText, recordingNotes, summary.',
+            'You revise short-form creator scripts. Return only JSON with string keys: hook, spokenScript, onScreenText, summary.',
         },
         {
           role: 'user',
@@ -141,9 +137,7 @@ export default class ScriptGeneratorService {
     const script = {
       hook: this.scriptSectionToText(parsed.hook),
       spokenScript: this.scriptSectionToText(parsed.spokenScript),
-      shotList: this.scriptSectionToText(parsed.shotList),
       onScreenText: this.scriptSectionToText(parsed.onScreenText),
-      recordingNotes: this.scriptSectionToText(parsed.recordingNotes),
     }
 
     for (const value of Object.values(script)) {

@@ -85,11 +85,7 @@ const defaultWorkspace = {
         'Your next customer may only trust you after the fifth post, not the first pitch.',
       scriptSpoken:
         'Posting daily is not about chasing the algorithm.\n\nIt is about giving future customers enough proof to understand how you think before they ever book a call.',
-      scriptShotList:
-        'Scene 1\nType: Talking head\nDuration: 3s\n\nScene 2\nType: B-roll\nShow: Founder recording a quick answer\n\nScene 3\nType: Talking head',
       scriptOnScreenText: 'Daily posts build trust\nProof beats polish',
-      scriptRecordingNotes:
-        'Tone: calm and direct\nPause after the hook\nKeep the example specific',
       recordings: ['Take #1 - strongest opening', 'Take #2 - cleaner ending'],
       editing: [
         { label: 'Captions', done: true },
@@ -114,11 +110,7 @@ const defaultWorkspace = {
       scriptHook: 'AI is raising the floor. Taste is still the ceiling.',
       scriptSpoken:
         'AI will not replace creators who know what to keep, what to cut, and what their audience actually believes.\n\nThe draft is cheap. The judgment is not.',
-      scriptShotList:
-        'Scene 1\nType: Talking head\nDuration: 3s\n\nScene 2\nType: Screen recording\nShow: AI draft with edits\n\nScene 3\nType: Talking head',
       scriptOnScreenText: 'The draft is cheap\nJudgment is not',
-      scriptRecordingNotes:
-        'Tone: opinionated\nPoint at the edit example\nSlow down on the last sentence',
       recordings: ['Take #1 - calmer delivery', 'Take #2 - better CTA'],
       editing: [
         { label: 'Captions', done: true },
@@ -143,10 +135,7 @@ const defaultWorkspace = {
       scriptHook: 'Build in public is not a diary.',
       scriptSpoken:
         'Build in public works when the lesson is useful without private context.\n\nShare the decision, the tradeoff, and the result.\n\nKeep the diary out of it.',
-      scriptShotList:
-        'Scene 1\nType: Talking head\nDuration: 3s\n\nScene 2\nType: B-roll\nShow: Product update draft\n\nScene 3\nType: Talking head',
       scriptOnScreenText: 'Share the lesson\nSkip the diary',
-      scriptRecordingNotes: 'Tone: practical\nPause before the last line\nKeep delivery concise',
       recordings: [],
       editing: [
         { label: 'Captions', done: false },
@@ -713,9 +702,7 @@ export default class WorkspaceService {
       script: {
         hook: video.scriptHook,
         spokenScript: video.scriptSpoken,
-        shotList: video.scriptShotList,
         onScreenText: video.scriptOnScreenText,
-        recordingNotes: video.scriptRecordingNotes,
       },
       recordings: video.recordings.map(recording => ({
         id: recording.id,
@@ -744,19 +731,17 @@ export default class WorkspaceService {
     return {
       hook: video.scriptHook,
       spokenScript: video.scriptSpoken,
-      shotList: video.scriptShotList,
       onScreenText: video.scriptOnScreenText,
-      recordingNotes: video.scriptRecordingNotes,
     }
   }
 
   private applyScript(video: Video, script: VideoScript) {
     video.scriptHook = script.hook
     video.scriptSpoken = script.spokenScript
-    video.scriptShotList = script.shotList
+    video.scriptShotList = ''
     video.scriptOnScreenText = script.onScreenText
     video.scriptAssetsNeeded = ''
-    video.scriptRecordingNotes = script.recordingNotes
+    video.scriptRecordingNotes = ''
   }
 
   private async getVideo(userId: string, videoId: string) {
@@ -810,10 +795,10 @@ export default class WorkspaceService {
             transcript: video.transcript,
             scriptHook: video.scriptHook,
             scriptSpoken: video.scriptSpoken,
-            scriptShotList: video.scriptShotList,
+            scriptShotList: '',
             scriptOnScreenText: video.scriptOnScreenText,
             scriptAssetsNeeded: '',
-            scriptRecordingNotes: video.scriptRecordingNotes,
+            scriptRecordingNotes: '',
             preview: video.preview,
             publish: video.publish,
             sortOrder: index,
