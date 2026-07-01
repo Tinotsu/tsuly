@@ -277,10 +277,6 @@ function VideoDetailModal({
             <Mic2 />
             Record
           </Link>
-          <Button type="button" variant="outline">
-            <Check />
-            Validate
-          </Button>
           <Button type="button" disabled={!finalVideoUrl} onClick={() => setPublishOpen(true)}>
             <Send />
             Publish
