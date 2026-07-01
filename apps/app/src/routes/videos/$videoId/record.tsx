@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 
 import { redirectToLoginIfNotAuthenticated } from '@/hooks/auth'
-import { RecordingPage } from '@/workspace/recording-page'
+import { RecordingPage } from '@/record/recording-page'
 
 export const Route = createFileRoute('/videos/$videoId/record')({
   component: RouteComponent,
