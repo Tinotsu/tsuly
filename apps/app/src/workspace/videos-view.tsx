@@ -204,59 +204,63 @@ function VideoDetailModal({
           <div className="divide-y">
             <DetailBlock title="Idea">{video.idea}</DetailBlock>
             <DetailBlock title="Transcript">{video.transcript}</DetailBlock>
-            <DetailBlock title="Recording">
-              <RecordingTakes
-                videoId={video.id}
-                recordings={video.recordings}
-                deleteRecording={deleteRecording}
-              />
-            </DetailBlock>
-            <DetailBlock title="Final edit">
-              {video.editingJob?.status === 'ready' && finalVideoUrl ? (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm font-medium text-emerald-700">
-                    <Film className="size-4" />
-                    Rendered MP4 ready
-                  </div>
-                  <div className="mx-auto w-full max-w-[260px] overflow-hidden rounded-md bg-black">
-                    <video
-                      src={finalVideoUrl}
-                      className="aspect-[9/16] w-full object-cover"
-                      controls
-                      playsInline
-                      preload="metadata"
-                    />
-                  </div>
-                </div>
-              ) : video.editingJob?.status === 'failed' ? (
-                <span className="text-destructive">
-                  {video.editingJob.errorMessage || 'Render failed'}
-                </span>
-              ) : video.editingJob?.status === 'processing' ? (
-                'Rendering final MP4'
-              ) : video.editingJob?.status === 'queued' ? (
-                'Final edit queued'
-              ) : (
-                'No final edit yet'
-              )}
-            </DetailBlock>
-            <DetailBlock title="Editing">
-              <div className="space-y-2">
-                {video.editing.map(item => (
-                  <div key={item.label} className="flex items-center gap-2">
-                    <span
-                      className={cn(
-                        'flex size-5 items-center justify-center rounded border',
-                        item.done && 'border-emerald-600 bg-emerald-600 text-white',
-                      )}
-                    >
-                      {item.done && <Check className="size-3.5" />}
+            {!video.inProduction ? null : (
+              <>
+                <DetailBlock title="Recording">
+                  <RecordingTakes
+                    videoId={video.id}
+                    recordings={video.recordings}
+                    deleteRecording={deleteRecording}
+                  />
+                </DetailBlock>
+                <DetailBlock title="Final edit">
+                  {video.editingJob?.status === 'ready' && finalVideoUrl ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-sm font-medium text-emerald-700">
+                        <Film className="size-4" />
+                        Rendered MP4 ready
+                      </div>
+                      <div className="mx-auto w-full max-w-[260px] overflow-hidden rounded-md bg-black">
+                        <video
+                          src={finalVideoUrl}
+                          className="aspect-[9/16] w-full object-cover"
+                          controls
+                          playsInline
+                          preload="metadata"
+                        />
+                      </div>
+                    </div>
+                  ) : video.editingJob?.status === 'failed' ? (
+                    <span className="text-destructive">
+                      {video.editingJob.errorMessage || 'Render failed'}
                     </span>
-                    {item.label}
+                  ) : video.editingJob?.status === 'processing' ? (
+                    'Rendering final MP4'
+                  ) : video.editingJob?.status === 'queued' ? (
+                    'Final edit queued'
+                  ) : (
+                    'No final edit yet'
+                  )}
+                </DetailBlock>
+                <DetailBlock title="Editing">
+                  <div className="space-y-2">
+                    {video.editing.map(item => (
+                      <div key={item.label} className="flex items-center gap-2">
+                        <span
+                          className={cn(
+                            'flex size-5 items-center justify-center rounded border',
+                            item.done && 'border-emerald-600 bg-emerald-600 text-white',
+                          )}
+                        >
+                          {item.done && <Check className="size-3.5" />}
+                        </span>
+                        {item.label}
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </DetailBlock>
+                </DetailBlock>
+              </>
+            )}
           </div>
         </div>
 
@@ -277,10 +281,12 @@ function VideoDetailModal({
             <Mic2 />
             Record
           </Link>
-          <Button type="button" disabled={!finalVideoUrl} onClick={() => setPublishOpen(true)}>
-            <Send />
-            Publish
-          </Button>
+          {finalVideoUrl ? (
+            <Button type="button" onClick={() => setPublishOpen(true)}>
+              <Send />
+              Publish
+            </Button>
+          ) : null}
           <Button type="button" variant="destructive" disabled={isDeleting} onClick={onDelete}>
             <Trash2 />
             Delete

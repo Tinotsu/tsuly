@@ -86,20 +86,8 @@ const defaultWorkspace = {
       scriptSpoken:
         'Posting daily is not about chasing the algorithm.\n\nIt is about giving future customers enough proof to understand how you think before they ever book a call.',
       scriptOnScreenText: 'Daily posts build trust\nProof beats polish',
-      recordings: ['Take #1 - strongest opening', 'Take #2 - cleaner ending'],
-      editing: [
-        { label: 'Captions', done: true },
-        { label: 'Smart cuts', done: true },
-        { label: 'Silence removal', done: true },
-      ],
-      preview: 'Approved 9:16 cut, 54 seconds',
-      publish: 'Queued for LinkedIn, TikTok, and YouTube Shorts',
-      stages: [
-        { label: 'Script', done: true },
-        { label: 'Record', done: true },
-        { label: 'Edit', done: true },
-        { label: 'Publish', done: true },
-      ],
+      preview: '',
+      publish: 'Not scheduled',
     },
     {
       ideaKey: 'ai-future',
@@ -111,20 +99,8 @@ const defaultWorkspace = {
       scriptSpoken:
         'AI will not replace creators who know what to keep, what to cut, and what their audience actually believes.\n\nThe draft is cheap. The judgment is not.',
       scriptOnScreenText: 'The draft is cheap\nJudgment is not',
-      recordings: ['Take #1 - calmer delivery', 'Take #2 - better CTA'],
-      editing: [
-        { label: 'Captions', done: true },
-        { label: 'Smart cuts', done: true },
-        { label: 'Silence removal', done: true },
-      ],
-      preview: 'Waiting for validation',
+      preview: '',
       publish: 'Not scheduled',
-      stages: [
-        { label: 'Script', done: true },
-        { label: 'Record', done: false },
-        { label: 'Edit', done: false },
-        { label: 'Publish', done: false },
-      ],
     },
     {
       ideaKey: null,
@@ -136,20 +112,8 @@ const defaultWorkspace = {
       scriptSpoken:
         'Build in public works when the lesson is useful without private context.\n\nShare the decision, the tradeoff, and the result.\n\nKeep the diary out of it.',
       scriptOnScreenText: 'Share the lesson\nSkip the diary',
-      recordings: [],
-      editing: [
-        { label: 'Captions', done: false },
-        { label: 'Smart cuts', done: false },
-        { label: 'Silence removal', done: false },
-      ],
-      preview: 'No cut yet',
+      preview: '',
       publish: 'Not scheduled',
-      stages: [
-        { label: 'Script', done: false },
-        { label: 'Record', done: false },
-        { label: 'Edit', done: false },
-        { label: 'Publish', done: false },
-      ],
     },
   ],
   brandBrain: [
@@ -244,6 +208,19 @@ const defaultWorkspace = {
   ],
 } as const
 
+const defaultVideoStages = [
+  { label: 'Script', sortOrder: 0 },
+  { label: 'Record', sortOrder: 1 },
+  { label: 'Edit', sortOrder: 2 },
+  { label: 'Publish', sortOrder: 3 },
+] as const
+
+const defaultEditingTasks = [
+  { label: 'Captions', sortOrder: 0 },
+  { label: 'Smart cuts', sortOrder: 1 },
+  { label: 'Silence removal', sortOrder: 2 },
+] as const
+
 export default class WorkspaceService {
   async getWorkspace(userId: string) {
     const firstIdea = await Idea.query().where('user_id', userId).first()
@@ -257,7 +234,6 @@ export default class WorkspaceService {
     const videos = await Video.query()
       .where('user_id', userId)
       .orderBy('sort_order')
-      .preload('stages', query => query.orderBy('sort_order'))
       .preload('recordings', query => query.orderBy('sort_order'))
       .preload('editing', query => query.orderBy('sort_order'))
       .preload('editingJobs', query => query.orderBy('created_at', 'desc'))
@@ -372,22 +348,17 @@ export default class WorkspaceService {
       scriptHook: '',
       scriptSpoken: '',
       scriptOnScreenText: '',
-      preview: 'No cut yet',
+      preview: '',
       publish: 'Not scheduled',
       sortOrder: (lastVideo?.sortOrder ?? -1) + 1,
     })
 
-    await video.related('stages').createMany([
-      { label: 'Script', done: false, sortOrder: 0 },
-      { label: 'Record', done: false, sortOrder: 1 },
-      { label: 'Edit', done: false, sortOrder: 2 },
-      { label: 'Publish', done: false, sortOrder: 3 },
-    ])
-    await video.related('editing').createMany([
-      { label: 'Captions', done: false, sortOrder: 0 },
-      { label: 'Smart cuts', done: false, sortOrder: 1 },
-      { label: 'Silence removal', done: false, sortOrder: 2 },
-    ])
+    await video
+      .related('stages')
+      .createMany(defaultVideoStages.map(stage => ({ ...stage, done: false })))
+    await video
+      .related('editing')
+      .createMany(defaultEditingTasks.map(task => ({ ...task, done: false })))
 
     return this.serializeVideo(await this.getVideo(userId, video.id))
   }
@@ -443,22 +414,17 @@ export default class WorkspaceService {
         title: idea.title,
         idea: idea.problem || idea.title,
         transcript: script.spokenScript,
-        preview: 'No cut yet',
+        preview: '',
         publish: 'Not scheduled',
         sortOrder: (lastVideo?.sortOrder ?? -1) + 1,
       })
 
-      await video.related('stages').createMany([
-        { label: 'Script', done: true, sortOrder: 0 },
-        { label: 'Record', done: false, sortOrder: 1 },
-        { label: 'Edit', done: false, sortOrder: 2 },
-        { label: 'Publish', done: false, sortOrder: 3 },
-      ])
-      await video.related('editing').createMany([
-        { label: 'Captions', done: false, sortOrder: 0 },
-        { label: 'Smart cuts', done: false, sortOrder: 1 },
-        { label: 'Silence removal', done: false, sortOrder: 2 },
-      ])
+      await video
+        .related('stages')
+        .createMany(defaultVideoStages.map(stage => ({ ...stage, done: false })))
+      await video
+        .related('editing')
+        .createMany(defaultEditingTasks.map(task => ({ ...task, done: false })))
     }
 
     video.title = idea.title
@@ -466,7 +432,6 @@ export default class WorkspaceService {
     video.transcript = script.spokenScript
     this.applyScript(video, script)
     await video.save()
-    await video.related('stages').query().where('label', 'Script').update({ done: true })
 
     return this.serializeVideo(await this.getVideo(userId, video.id))
   }
@@ -549,7 +514,6 @@ export default class WorkspaceService {
 
     video.preview = 'Auto-edit queued'
     await video.save()
-    await video.related('stages').query().where('label', 'Record').update({ done: true })
 
     const updatedVideo = await this.getVideo(userId, video.id)
 
@@ -576,15 +540,8 @@ export default class WorkspaceService {
 
     await recording.delete()
 
-    const remainingRecording = await VideoRecording.query().where('video_id', video.id).first()
-    await video
-      .related('stages')
-      .query()
-      .where('label', 'Record')
-      .update({ done: Boolean(remainingRecording) })
-
-    if (!remainingRecording) {
-      video.preview = 'No cut yet'
+    if (!(await VideoRecording.query().where('video_id', video.id).first())) {
+      video.preview = ''
       await video.save()
     }
 
@@ -690,6 +647,13 @@ export default class WorkspaceService {
 
   private serializeVideo(video: Video) {
     const editingJob = video.editingJobs?.[0]
+    const inProduction = video.recordings.length > 0 || Boolean(editingJob)
+    const stages = [
+      { label: 'Script', done: Boolean(video.scriptSpoken.trim()) },
+      { label: 'Record', done: video.recordings.length > 0 },
+      { label: 'Edit', done: editingJob?.status === 'ready' },
+      { label: 'Publish', done: false },
+    ]
 
     return {
       id: video.id,
@@ -717,10 +681,14 @@ export default class WorkspaceService {
             errorMessage: editingJob.errorMessage,
           }
         : null,
-      editing: video.editing.map(task => ({ label: task.label, done: task.done })),
+      editing: video.editing.map(task => ({
+        label: task.label,
+        done: editingJob?.status === 'ready' ? task.done : false,
+      })),
+      inProduction,
       preview: video.preview,
       publish: video.publish,
-      stages: video.stages.map(stage => ({ label: stage.label, done: stage.done })),
+      stages: inProduction ? stages : stages.filter(stage => stage.label === 'Script'),
     }
   }
 
@@ -742,7 +710,6 @@ export default class WorkspaceService {
     return await Video.query()
       .where('user_id', userId)
       .where('id', videoId)
-      .preload('stages', query => query.orderBy('sort_order'))
       .preload('recordings', query => query.orderBy('sort_order'))
       .preload('editing', query => query.orderBy('sort_order'))
       .preload('editingJobs', query => query.orderBy('created_at', 'desc'))
@@ -798,26 +765,11 @@ export default class WorkspaceService {
         )
 
         await createdVideo.related('stages').createMany(
-          video.stages.map((stage, stageIndex) => ({
-            label: stage.label,
-            done: stage.done,
-            sortOrder: stageIndex,
-          })),
-          { client: trx },
-        )
-        await createdVideo.related('recordings').createMany(
-          video.recordings.map((label, recordingIndex) => ({
-            label,
-            sortOrder: recordingIndex,
-          })),
+          defaultVideoStages.map(stage => ({ ...stage, done: false })),
           { client: trx },
         )
         await createdVideo.related('editing').createMany(
-          video.editing.map((task, taskIndex) => ({
-            label: task.label,
-            done: task.done,
-            sortOrder: taskIndex,
-          })),
+          defaultEditingTasks.map(task => ({ ...task, done: false })),
           { client: trx },
         )
       }

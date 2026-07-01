@@ -95,7 +95,6 @@ export default class VideoEditingService {
 
       video.preview = 'Ready for validation'
       await video.save()
-      await video.related('stages').query().where('label', 'Edit').update({ done: true })
       await video
         .related('editing')
         .query()

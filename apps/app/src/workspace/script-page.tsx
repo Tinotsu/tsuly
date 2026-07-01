@@ -1,6 +1,6 @@
 import { useMutation, useSuspenseQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { ArrowLeft, Pencil, Save, Send, Video } from 'lucide-react'
+import { ArrowLeft, Send, Video } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -21,11 +21,6 @@ export function ScriptPage({ videoId }: { videoId: string }) {
   )
   const video = workspace.videos.find(item => item.id === videoId)
   const [draftScript, setDraftScript] = useState<Script | null>(video?.script ?? null)
-  const [editing, setEditing] = useState<Record<EditableScriptField, boolean>>({
-    hook: false,
-    spokenScript: false,
-    onScreenText: false,
-  })
   const [chatInput, setChatInput] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const saveScript = useMutation(query.workspace.updateVideoScript.mutationOptions())
@@ -49,14 +44,12 @@ export function ScriptPage({ videoId }: { videoId: string }) {
     )
   }
 
-  const selectedVideo = video
-
   function updateDraft(field: keyof Script, value: string) {
     setDraftScript(current => (current ? { ...current, [field]: value } : current))
   }
 
   function saveField(field: EditableScriptField) {
-    if (!draftScript) return
+    if (!draftScript || draftScript[field] === video.script[field]) return
 
     const body =
       field === 'hook'
@@ -66,15 +59,10 @@ export function ScriptPage({ videoId }: { videoId: string }) {
           : { onScreenText: draftScript.onScreenText }
 
     saveScript.mutate(
-      { params: { id: selectedVideo.id }, body },
+      { params: { id: video.id }, body },
       {
         onSuccess: async result => {
           setDraftScript(result.video.script)
-          setEditing(current => ({ ...current, [field]: false }))
-          setMessages(current => [
-            ...current,
-            { role: 'ai', content: `Updated:\n${result.summary}` },
-          ])
           await queryClient.invalidateQueries({
             queryKey: query.workspace.show.queryOptions({}).queryKey,
           })
@@ -90,7 +78,7 @@ export function ScriptPage({ videoId }: { videoId: string }) {
     setMessages(current => [...current, { role: 'you', content: trimmed }])
     setChatInput('')
     chatScript.mutate(
-      { params: { id: selectedVideo.id }, body: { message: trimmed } },
+      { params: { id: video.id }, body: { message: trimmed } },
       {
         onSuccess: async result => {
           setDraftScript(result.video.script)
@@ -119,52 +107,38 @@ export function ScriptPage({ videoId }: { videoId: string }) {
               <ArrowLeft className="size-4" />
               Videos
             </Link>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight">{selectedVideo.title}</h1>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight">{video.title}</h1>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Link
-              to="/videos/$videoId/record"
-              params={{ videoId: selectedVideo.id }}
-              className={buttonVariants({ variant: 'outline' })}
-            >
-              <Video />
-              Start recording
-            </Link>
-          </div>
+          <Link
+            to="/videos/$videoId/record"
+            params={{ videoId: video.id }}
+            className={buttonVariants({ variant: 'outline' })}
+          >
+            <Video />
+            Start recording
+          </Link>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_390px]">
           <section className="space-y-4">
-            <EditableScriptBlock
-              title="Hook"
-              rows={3}
-              value={draftScript.hook}
-              editing={editing.hook}
-              isSaving={saveScript.isPending}
-              onEdit={() => setEditing(current => ({ ...current, hook: true }))}
-              onSave={() => saveField('hook')}
-              onChange={value => updateDraft('hook', value)}
-            />
-            <EditableScriptBlock
-              title="Spoken script"
-              rows={9}
-              value={draftScript.spokenScript}
-              editing={editing.spokenScript}
-              isSaving={saveScript.isPending}
-              onEdit={() => setEditing(current => ({ ...current, spokenScript: true }))}
-              onSave={() => saveField('spokenScript')}
-              onChange={value => updateDraft('spokenScript', value)}
-            />
-            <EditableScriptBlock
-              title="On-screen text"
-              rows={4}
-              value={draftScript.onScreenText}
-              editing={editing.onScreenText}
-              isSaving={saveScript.isPending}
-              onEdit={() => setEditing(current => ({ ...current, onScreenText: true }))}
-              onSave={() => saveField('onScreenText')}
-              onChange={value => updateDraft('onScreenText', value)}
-            />
+            {(
+              [
+                ['Hook', 'hook', 3],
+                ['Spoken script', 'spokenScript', 9],
+                ['On-screen text', 'onScreenText', 4],
+              ] as const
+            ).map(([title, field, rows]) => (
+              <div key={field} className="rounded-lg border bg-card p-4">
+                <p className="text-sm font-medium text-muted-foreground">{title}</p>
+                <textarea
+                  value={draftScript[field]}
+                  rows={rows}
+                  onChange={event => updateDraft(field, event.target.value)}
+                  onBlur={() => saveField(field)}
+                  className="mt-2 w-full resize-none rounded-md border bg-background px-3 py-2 text-sm leading-6 outline-none focus:text-foreground"
+                />
+              </div>
+            ))}
           </section>
 
           <aside className="flex h-[calc(100vh-12rem)] min-h-[520px] flex-col rounded-lg border bg-card lg:sticky lg:top-20">
@@ -219,53 +193,5 @@ export function ScriptPage({ videoId }: { videoId: string }) {
         </div>
       </div>
     </main>
-  )
-}
-
-function EditableScriptBlock({
-  title,
-  value,
-  rows,
-  editing,
-  isSaving,
-  onEdit,
-  onSave,
-  onChange,
-}: {
-  title: string
-  value: string
-  rows: number
-  editing: boolean
-  isSaving: boolean
-  onEdit: () => void
-  onSave: () => void
-  onChange: (value: string) => void
-}) {
-  return (
-    <div className="rounded-lg border bg-card p-4">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="text-base font-semibold">{title}</h2>
-        <div className="flex gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={onEdit}>
-            <Pencil />
-            Edit
-          </Button>
-          <Button type="button" size="sm" disabled={!editing || isSaving} onClick={onSave}>
-            <Save />
-            Save
-          </Button>
-        </div>
-      </div>
-      <textarea
-        value={value}
-        readOnly={!editing}
-        rows={rows}
-        onChange={event => onChange(event.target.value)}
-        className={cn(
-          'w-full resize-none rounded-md border bg-background px-3 py-2 text-sm leading-6 outline-none focus:text-foreground',
-          !editing && 'text-muted-foreground',
-        )}
-      />
-    </div>
   )
 }

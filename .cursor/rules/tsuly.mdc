@@ -1,0 +1,8 @@
+---
+alwaysApply: true
+---
+- No helpers unless reused 3+ times.
+- No "remove for now" — delete fully (DB, model, API, UI) or don't touch.
+- Don't duplicate server logic on the client. API owns truth; UI renders it.
+- Match existing patterns (ideas-view, brand-brain-view) before inventing new ones.
+- If unsure, ask — don't add abstractions "for later".

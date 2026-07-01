@@ -32,6 +32,7 @@ export type Workspace = {
       errorMessage: string | null
     } | null
     editing: Array<{ label: string; done: boolean }>
+    inProduction: boolean
     preview: string
     publish: string
     stages: Array<{ label: string; done: boolean }>
