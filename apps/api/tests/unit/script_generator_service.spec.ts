@@ -7,7 +7,6 @@ const generatedScript = {
   spokenScript: 'Spoken script',
   shotList: 'Shot list',
   onScreenText: 'On-screen text',
-  assetsNeeded: 'Assets needed',
   recordingNotes: 'Recording notes',
 }
 

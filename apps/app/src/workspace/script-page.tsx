@@ -1,6 +1,6 @@
 import { useMutation, useSuspenseQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { ArrowLeft, FolderOpen, Pencil, Save, Send, Video } from 'lucide-react'
+import { ArrowLeft, Pencil, Save, Send, Video } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -130,10 +130,6 @@ export function ScriptPage({ videoId }: { videoId: string }) {
               <Video />
               Start recording
             </Link>
-            <Button type="button">
-              <FolderOpen />
-              Fill assets
-            </Button>
           </div>
         </div>
 
@@ -170,9 +166,8 @@ export function ScriptPage({ videoId }: { videoId: string }) {
               onChange={value => updateDraft('onScreenText', value)}
             />
 
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2">
               <ScriptTextBlock title="Shot list">{draftScript.shotList}</ScriptTextBlock>
-              <ScriptTextBlock title="Assets needed">{draftScript.assetsNeeded}</ScriptTextBlock>
               <ScriptTextBlock title="Recording notes">
                 {draftScript.recordingNotes}
               </ScriptTextBlock>

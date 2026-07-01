@@ -88,7 +88,6 @@ const defaultWorkspace = {
       scriptShotList:
         'Scene 1\nType: Talking head\nDuration: 3s\n\nScene 2\nType: B-roll\nShow: Founder recording a quick answer\n\nScene 3\nType: Talking head',
       scriptOnScreenText: 'Daily posts build trust\nProof beats polish',
-      scriptAssetsNeeded: '- Phone camera setup\n- Example customer question\n- Posting dashboard',
       scriptRecordingNotes:
         'Tone: calm and direct\nPause after the hook\nKeep the example specific',
       recordings: ['Take #1 - strongest opening', 'Take #2 - cleaner ending'],
@@ -118,7 +117,6 @@ const defaultWorkspace = {
       scriptShotList:
         'Scene 1\nType: Talking head\nDuration: 3s\n\nScene 2\nType: Screen recording\nShow: AI draft with edits\n\nScene 3\nType: Talking head',
       scriptOnScreenText: 'The draft is cheap\nJudgment is not',
-      scriptAssetsNeeded: '- AI draft screen recording\n- Edited script example',
       scriptRecordingNotes:
         'Tone: opinionated\nPoint at the edit example\nSlow down on the last sentence',
       recordings: ['Take #1 - calmer delivery', 'Take #2 - better CTA'],
@@ -148,7 +146,6 @@ const defaultWorkspace = {
       scriptShotList:
         'Scene 1\nType: Talking head\nDuration: 3s\n\nScene 2\nType: B-roll\nShow: Product update draft\n\nScene 3\nType: Talking head',
       scriptOnScreenText: 'Share the lesson\nSkip the diary',
-      scriptAssetsNeeded: '- Product update draft\n- Example tradeoff note',
       scriptRecordingNotes: 'Tone: practical\nPause before the last line\nKeep delivery concise',
       recordings: [],
       editing: [
@@ -718,7 +715,6 @@ export default class WorkspaceService {
         spokenScript: video.scriptSpoken,
         shotList: video.scriptShotList,
         onScreenText: video.scriptOnScreenText,
-        assetsNeeded: video.scriptAssetsNeeded,
         recordingNotes: video.scriptRecordingNotes,
       },
       recordings: video.recordings.map(recording => ({
@@ -750,7 +746,6 @@ export default class WorkspaceService {
       spokenScript: video.scriptSpoken,
       shotList: video.scriptShotList,
       onScreenText: video.scriptOnScreenText,
-      assetsNeeded: video.scriptAssetsNeeded,
       recordingNotes: video.scriptRecordingNotes,
     }
   }
@@ -760,7 +755,7 @@ export default class WorkspaceService {
     video.scriptSpoken = script.spokenScript
     video.scriptShotList = script.shotList
     video.scriptOnScreenText = script.onScreenText
-    video.scriptAssetsNeeded = script.assetsNeeded
+    video.scriptAssetsNeeded = ''
     video.scriptRecordingNotes = script.recordingNotes
   }
 
@@ -817,7 +812,7 @@ export default class WorkspaceService {
             scriptSpoken: video.scriptSpoken,
             scriptShotList: video.scriptShotList,
             scriptOnScreenText: video.scriptOnScreenText,
-            scriptAssetsNeeded: video.scriptAssetsNeeded,
+            scriptAssetsNeeded: '',
             scriptRecordingNotes: video.scriptRecordingNotes,
             preview: video.preview,
             publish: video.publish,

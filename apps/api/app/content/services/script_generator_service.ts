@@ -5,7 +5,6 @@ export type VideoScript = {
   spokenScript: string
   shotList: string
   onScreenText: string
-  assetsNeeded: string
   recordingNotes: string
 }
 
@@ -42,7 +41,7 @@ export default class ScriptGeneratorService {
       {
         role: 'system',
         content:
-          'You write short-form creator scripts. Return only JSON with string keys: hook, spokenScript, shotList, onScreenText, assetsNeeded, recordingNotes.',
+          'You write short-form creator scripts. Return only JSON with string keys: hook, spokenScript, shotList, onScreenText, recordingNotes.',
       },
       {
         role: 'user',
@@ -53,7 +52,6 @@ export default class ScriptGeneratorService {
           'spokenScript is exactly what the creator reads.',
           'shotList is optional visuals/B-roll, but include useful scenes when relevant.',
           'onScreenText is the text appearing in the video.',
-          'assetsNeeded is what the creator must capture.',
           'recordingNotes are delivery notes, not part of the script.',
           '',
           `Title: ${input.title}`,
@@ -76,7 +74,7 @@ export default class ScriptGeneratorService {
         {
           role: 'system',
           content:
-            'You revise short-form creator scripts. Return only JSON with string keys: hook, spokenScript, shotList, onScreenText, assetsNeeded, recordingNotes, summary.',
+            'You revise short-form creator scripts. Return only JSON with string keys: hook, spokenScript, shotList, onScreenText, recordingNotes, summary.',
         },
         {
           role: 'user',
@@ -145,7 +143,6 @@ export default class ScriptGeneratorService {
       spokenScript: this.scriptSectionToText(parsed.spokenScript),
       shotList: this.scriptSectionToText(parsed.shotList),
       onScreenText: this.scriptSectionToText(parsed.onScreenText),
-      assetsNeeded: this.scriptSectionToText(parsed.assetsNeeded),
       recordingNotes: this.scriptSectionToText(parsed.recordingNotes),
     }
 

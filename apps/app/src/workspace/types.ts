@@ -17,7 +17,6 @@ export type Workspace = {
       spokenScript: string
       shotList: string
       onScreenText: string
-      assetsNeeded: string
       recordingNotes: string
     }
     recordings: Array<{
