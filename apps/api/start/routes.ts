@@ -31,6 +31,7 @@ defineRouteGroup('content', () => {
   router.get('videos/:id/final.mp4', [content.Workspace, 'downloadFinalVideo'])
   router.delete('videos/:videoId/recordings/:recordingId', [content.Workspace, 'deleteRecording'])
   router.patch('brand-brain-fields/:id', [content.Workspace, 'updateBrandBrainField'])
+  router.delete('brand-brain-fields/:id', [content.Workspace, 'deleteBrandBrainField'])
   router.post('brand-brain-sections/:sectionId/fields', [
     content.Workspace,
     'createBrandBrainField',

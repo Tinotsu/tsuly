@@ -40,6 +40,13 @@ export default class WorkspaceController {
     return await serialize.withoutWrapping(field)
   }
 
+  async deleteBrandBrainField({ auth, params, serialize }: HttpContext) {
+    const user = auth.getUserOrFail()
+    const result = await workspaceService.deleteBrandBrainField(user.id, params.id)
+
+    return await serialize.withoutWrapping(result)
+  }
+
   async createIdea({ auth, request, serialize }: HttpContext) {
     const user = auth.getUserOrFail()
     const payload = await request.validateUsing(createIdeaValidator)

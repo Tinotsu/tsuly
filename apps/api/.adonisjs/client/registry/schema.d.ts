@@ -199,6 +199,18 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['updateBrandBrainField']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
   }
+  'workspace.delete_brand_brain_field': {
+    methods: ["DELETE"]
+    pattern: '/content/brand-brain-fields/:id'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['deleteBrandBrainField']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['deleteBrandBrainField']>>>
+    }
+  }
   'workspace.create_brand_brain_field': {
     methods: ["POST"]
     pattern: '/content/brand-brain-sections/:sectionId/fields'

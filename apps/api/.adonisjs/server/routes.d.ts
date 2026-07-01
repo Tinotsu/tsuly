@@ -20,6 +20,7 @@ export type ScannedRoutes = {
     'workspace.download_final_video': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'workspace.delete_recording': { paramsTuple: [ParamValue,ParamValue]; params: {'videoId': ParamValue,'recordingId': ParamValue} }
     'workspace.update_brand_brain_field': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'workspace.delete_brand_brain_field': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'workspace.create_brand_brain_field': { paramsTuple: [ParamValue]; params: {'sectionId': ParamValue} }
     'billing.webhook': { paramsTuple?: []; params?: {} }
     'auth.is_authenticated': { paramsTuple?: []; params?: {} }
@@ -59,6 +60,7 @@ export type ScannedRoutes = {
   }
   DELETE: {
     'workspace.delete_recording': { paramsTuple: [ParamValue,ParamValue]; params: {'videoId': ParamValue,'recordingId': ParamValue} }
+    'workspace.delete_brand_brain_field': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
 }
 declare module '@adonisjs/core/types/http' {

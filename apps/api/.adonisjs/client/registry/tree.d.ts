@@ -25,6 +25,7 @@ export interface ApiDefinition {
     downloadFinalVideo: typeof routes['workspace.download_final_video']
     deleteRecording: typeof routes['workspace.delete_recording']
     updateBrandBrainField: typeof routes['workspace.update_brand_brain_field']
+    deleteBrandBrainField: typeof routes['workspace.delete_brand_brain_field']
     createBrandBrainField: typeof routes['workspace.create_brand_brain_field']
   }
   healthChecks: typeof routes['health_checks']

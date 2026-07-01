@@ -102,6 +102,12 @@ const routes = {
     tokens: [{"old":"/content/brand-brain-fields/:id","type":0,"val":"content","end":""},{"old":"/content/brand-brain-fields/:id","type":0,"val":"brand-brain-fields","end":""},{"old":"/content/brand-brain-fields/:id","type":1,"val":"id","end":""}],
     types: placeholder as Registry['workspace.update_brand_brain_field']['types'],
   },
+  'workspace.delete_brand_brain_field': {
+    methods: ["DELETE"],
+    pattern: '/content/brand-brain-fields/:id',
+    tokens: [{"old":"/content/brand-brain-fields/:id","type":0,"val":"content","end":""},{"old":"/content/brand-brain-fields/:id","type":0,"val":"brand-brain-fields","end":""},{"old":"/content/brand-brain-fields/:id","type":1,"val":"id","end":""}],
+    types: placeholder as Registry['workspace.delete_brand_brain_field']['types'],
+  },
   'workspace.create_brand_brain_field': {
     methods: ["POST"],
     pattern: '/content/brand-brain-sections/:sectionId/fields',

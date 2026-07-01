@@ -612,6 +612,23 @@ export default class WorkspaceService {
     return { id: field.id, label: field.label, value: field.value }
   }
 
+  async deleteBrandBrainField(userId: string, fieldId: string) {
+    const section = await BrandBrainSection.query()
+      .where('user_id', userId)
+      .whereHas('fields', query => query.where('id', fieldId))
+      .preload('fields', query => query.where('id', fieldId))
+      .firstOrFail()
+
+    if (section.key !== 'context') {
+      throw new Error('Brand Brain cards can only be deleted from Extra Context')
+    }
+
+    const field = section.fields[0]
+    await field.delete()
+
+    return { id: field.id }
+  }
+
   private serializeIdea(idea: Idea) {
     return {
       id: idea.id,

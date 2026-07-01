@@ -1,5 +1,5 @@
-import { useMutation } from '@tanstack/react-query'
-import { Bot, FileText, Plus } from 'lucide-react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Bot, FileText, Plus, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
@@ -24,6 +24,7 @@ export function BrandBrainView({
   onSelectSection: (id: BrandSection['id']) => void
 }) {
   const [draftSections, setDraftSections] = useState(sections)
+  const queryClient = useQueryClient()
   const draftSelectedSection =
     draftSections.find(section => section.id === selectedSection.id) ?? draftSections[0]
   const SelectedIcon = brandIcons[draftSelectedSection.key] ?? FileText
@@ -38,6 +39,25 @@ export function BrandBrainView({
               : section,
           ),
         )
+      },
+    }),
+  )
+  const deleteField = useMutation(
+    query.workspace.deleteBrandBrainField.mutationOptions({
+      onSuccess: async (_result, variables) => {
+        setDraftSections(current =>
+          current.map(section =>
+            section.fields.some(field => field.id === variables.params.id)
+              ? {
+                  ...section,
+                  fields: section.fields.filter(field => field.id !== variables.params.id),
+                }
+              : section,
+          ),
+        )
+        await queryClient.invalidateQueries({
+          queryKey: query.workspace.show.queryOptions({}).queryKey,
+        })
       },
     }),
   )
@@ -139,20 +159,34 @@ export function BrandBrainView({
         <div className="grid gap-4 p-4 md:grid-cols-2">
           {draftSelectedSection.fields.map(field => (
             <div key={field.id} className="rounded-lg border bg-background p-4">
-              {draftSelectedSection.key === 'context' ? (
-                <input
-                  value={field.label}
-                  onChange={event =>
-                    updateDraftField(draftSelectedSection.id, field.id, {
-                      label: event.target.value,
-                    })
-                  }
-                  onBlur={() => saveDraftField(draftSelectedSection, field)}
-                  className="w-full bg-transparent text-sm font-medium text-muted-foreground outline-none focus:text-foreground"
-                />
-              ) : (
-                <p className="text-sm font-medium text-muted-foreground">{field.label}</p>
-              )}
+              <div className="flex items-start justify-between gap-2">
+                {draftSelectedSection.key === 'context' ? (
+                  <input
+                    value={field.label}
+                    onChange={event =>
+                      updateDraftField(draftSelectedSection.id, field.id, {
+                        label: event.target.value,
+                      })
+                    }
+                    onBlur={() => saveDraftField(draftSelectedSection, field)}
+                    className="min-w-0 flex-1 bg-transparent text-sm font-medium text-muted-foreground outline-none focus:text-foreground"
+                  />
+                ) : (
+                  <p className="text-sm font-medium text-muted-foreground">{field.label}</p>
+                )}
+                {draftSelectedSection.key === 'context' && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    disabled={deleteField.isPending}
+                    onClick={() => deleteField.mutate({ params: { id: field.id } })}
+                    aria-label={`Delete ${field.label}`}
+                  >
+                    <Trash2 />
+                  </Button>
+                )}
+              </div>
               <textarea
                 value={field.value}
                 onChange={event =>
