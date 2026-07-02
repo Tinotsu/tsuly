@@ -5,7 +5,13 @@ import type { DateTime } from 'luxon'
 import { WithPrimaryUuid } from '#app/core/mixins/with_uuid_pk'
 import { WithTimestamps } from '#app/core/mixins/with_timestamps'
 
-export type VideoEditingJobStatus = 'draft' | 'queued' | 'processing' | 'ready' | 'failed'
+export type VideoEditingJobStatus =
+  | 'draft'
+  | 'queued'
+  | 'processing'
+  | 'prepared'
+  | 'ready'
+  | 'failed'
 
 export default class VideoEditingJob extends compose(BaseModel, WithTimestamps, WithPrimaryUuid) {
   @column() declare videoId: string

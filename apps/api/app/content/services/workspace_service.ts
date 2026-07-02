@@ -524,13 +524,15 @@ export default class WorkspaceService {
     const editingJob = await VideoEditingJob.create({
       videoId: video.id,
       recordingId: recording.id,
-      status: 'draft',
+      status: 'queued',
+      currentStep: 'queued',
       originalPath: payload.storagePath,
       captionFont: 'Inter',
     })
 
-    video.preview = 'Ready to edit'
+    video.preview = 'Preparing edit'
     await video.save()
+    await enqueueVideoEditingJob(editingJob.id, 'prepare')
 
     const updatedVideo = await this.getVideo(userId, video.id)
 
@@ -555,11 +557,42 @@ export default class WorkspaceService {
   ) {
     const editingJob = await this.getVideoEditingJob(userId, editingJobId)
 
-    if (editingJob.status !== 'draft') {
-      throw new Error('Editing settings can only be changed before rendering starts')
+    if (editingJob.status === 'queued' || editingJob.status === 'processing') {
+      throw new Error('Editing settings cannot be changed while video work is running')
     }
 
     const recording = await VideoRecording.findOrFail(editingJob.recordingId)
+    const currentTrimStartMs = recording.trimStartMs ?? 0
+    const currentTrimEndMs = recording.trimEndMs ?? recording.durationMs ?? 0
+
+    if (
+      editingJob.status !== 'draft' &&
+      ((payload.trimStartMs !== undefined && payload.trimStartMs !== currentTrimStartMs) ||
+        (payload.trimEndMs !== undefined && payload.trimEndMs !== currentTrimEndMs))
+    ) {
+      throw new Error('Trim can only be changed before video preparation')
+    }
+
+    const renderSettingsChanged =
+      (payload.captionFont !== undefined && payload.captionFont !== editingJob.captionFont) ||
+      (payload.captionFontSize !== undefined &&
+        payload.captionFontSize !== editingJob.captionFontSize) ||
+      (payload.captionTextColor !== undefined &&
+        payload.captionTextColor !== editingJob.captionTextColor) ||
+      (payload.captionBackgroundEnabled !== undefined &&
+        payload.captionBackgroundEnabled !== editingJob.captionBackgroundEnabled) ||
+      (payload.captionBackgroundColor !== undefined &&
+        payload.captionBackgroundColor !== editingJob.captionBackgroundColor) ||
+      (payload.captionBackgroundOpacity !== undefined &&
+        payload.captionBackgroundOpacity !== editingJob.captionBackgroundOpacity) ||
+      (payload.captionPosition !== undefined &&
+        payload.captionPosition !== editingJob.captionPosition) ||
+      (payload.wordsPerCaption !== undefined &&
+        payload.wordsPerCaption !== editingJob.wordsPerCaption) ||
+      (payload.removeSilence !== undefined && payload.removeSilence !== editingJob.removeSilence) ||
+      (payload.silenceThresholdSeconds !== undefined &&
+        payload.silenceThresholdSeconds !== editingJob.silenceThresholdSeconds)
+
     if (payload.trimStartMs !== undefined) recording.trimStartMs = payload.trimStartMs
     if (payload.trimEndMs !== undefined) recording.trimEndMs = payload.trimEndMs
     await recording.save()
@@ -583,6 +616,11 @@ export default class WorkspaceService {
     if (payload.silenceThresholdSeconds !== undefined) {
       editingJob.silenceThresholdSeconds = payload.silenceThresholdSeconds
     }
+    if (editingJob.status === 'ready' && renderSettingsChanged) {
+      editingJob.status = 'prepared'
+      editingJob.currentStep = 'prepared'
+      editingJob.finalPath = null
+    }
     await editingJob.save()
 
     return this.serializeVideo(await this.getVideo(userId, editingJob.videoId))
@@ -591,8 +629,8 @@ export default class WorkspaceService {
   async startVideoEditingJob(userId: string, editingJobId: string) {
     const editingJob = await this.getVideoEditingJob(userId, editingJobId)
 
-    if (editingJob.status !== 'draft' && editingJob.status !== 'failed') {
-      throw new Error('Editing job has already started')
+    if (!['draft', 'failed'].includes(editingJob.status)) {
+      throw new Error('Editing job has already been prepared')
     }
 
     editingJob.status = 'queued'
@@ -611,7 +649,31 @@ export default class WorkspaceService {
     video.preview = 'Auto-edit queued'
     await video.save()
 
-    await enqueueVideoEditingJob(editingJob.id)
+    await enqueueVideoEditingJob(editingJob.id, 'prepare')
+
+    return this.serializeVideo(await this.getVideo(userId, editingJob.videoId))
+  }
+
+  async renderFinalVideoEditingJob(userId: string, editingJobId: string) {
+    const editingJob = await this.getVideoEditingJob(userId, editingJobId)
+
+    if (!['prepared', 'ready', 'failed'].includes(editingJob.status)) {
+      throw new Error('Prepare edit before rendering final')
+    }
+
+    editingJob.status = 'queued'
+    editingJob.currentStep = 'queued'
+    editingJob.finalPath = null
+    editingJob.errorMessage = null
+    editingJob.startedAt = null
+    editingJob.finishedAt = null
+    await editingJob.save()
+
+    const video = await Video.findOrFail(editingJob.videoId)
+    video.preview = 'Final render queued'
+    await video.save()
+
+    await enqueueVideoEditingJob(editingJob.id, 'render_final')
 
     return this.serializeVideo(await this.getVideo(userId, editingJob.videoId))
   }

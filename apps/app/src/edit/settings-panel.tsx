@@ -21,6 +21,7 @@ export function SettingsPanel({
   fontOptions,
   searchOptions,
   disabled,
+  trimDisabled,
   durationSeconds,
   trimStartSeconds,
   trimEndSeconds,
@@ -30,6 +31,7 @@ export function SettingsPanel({
   fontOptions: string[]
   searchOptions: string[]
   disabled: boolean
+  trimDisabled: boolean
   durationSeconds: number
   trimStartSeconds: number
   trimEndSeconds: number
@@ -131,7 +133,7 @@ export function SettingsPanel({
             min={0}
             max={durationSeconds}
             step={0.1}
-            disabled={disabled}
+            disabled={disabled || trimDisabled}
             onChange={value => updateDraft(onChange, 'trimStartMs', Math.round(value * 1000))}
           />
           <NumberField
@@ -140,7 +142,7 @@ export function SettingsPanel({
             min={0.1}
             max={durationSeconds}
             step={0.1}
-            disabled={disabled}
+            disabled={disabled || trimDisabled}
             onChange={value => updateDraft(onChange, 'trimEndMs', Math.round(value * 1000))}
           />
         </div>

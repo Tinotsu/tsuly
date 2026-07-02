@@ -30,7 +30,7 @@ export type Workspace = {
     editingJob: {
       id: string
       recordingId: string
-      status: 'draft' | 'queued' | 'processing' | 'ready' | 'failed'
+      status: 'draft' | 'queued' | 'processing' | 'prepared' | 'ready' | 'failed'
       currentStep: string | null
       normalizedPath: string | null
       audioPath: string | null

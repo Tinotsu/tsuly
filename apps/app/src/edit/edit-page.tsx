@@ -9,6 +9,7 @@ import { query } from '@/lib/tuyau'
 import { cn } from '@/lib/utils'
 
 import { AutomationPanel } from './automation-panel'
+import { parseSrt } from './captions'
 import { captionFont, useGoogleCaptionFonts } from './caption-fonts'
 import { apiBaseUrl, captionFontOptions } from './constants'
 import { SettingsPanel } from './settings-panel'
@@ -44,6 +45,15 @@ export function EditPage({ videoId }: { videoId: string }) {
       },
     }),
   )
+  const renderFinal = useMutation(
+    query.workspace.renderFinalVideoEditingJob.mutationOptions({
+      onSuccess: async () => {
+        await queryClient.invalidateQueries({
+          queryKey: query.workspace.show.queryOptions({}).queryKey,
+        })
+      },
+    }),
+  )
   const googleFonts = useQuery({
     queryKey: ['google-fonts'],
     queryFn: async () => {
@@ -58,6 +68,21 @@ export function EditPage({ videoId }: { videoId: string }) {
       return data.fonts ?? []
     },
     staleTime: 24 * 60 * 60 * 1000,
+  })
+  const captionsPath = editingJob?.captionsPath ?? ''
+  const captions = useQuery({
+    queryKey: ['edit-captions', captionsPath],
+    enabled: Boolean(captionsPath),
+    queryFn: async () => {
+      const response = await fetch(`${apiBaseUrl}${captionsPath}`, {
+        credentials: 'include',
+        headers: { Accept: 'text/plain' },
+      })
+
+      if (!response.ok) throw new Error('Could not load captions')
+
+      return parseSrt(await response.text())
+    },
   })
   const selectedCaptionFont = captionFont(draft?.captionFont ?? '')
   const fontOptions = useMemo(() => {
@@ -129,12 +154,19 @@ export function EditPage({ videoId }: { videoId: string }) {
   const rawVideoUrl = activeRecording.storagePath
     ? `${apiBaseUrl}${activeRecording.storagePath}`
     : ''
+  const normalizedVideoUrl = activeEditingJob.normalizedPath
+    ? `${apiBaseUrl}${activeEditingJob.normalizedPath}`
+    : ''
   const finalVideoUrl = activeEditingJob.finalPath
     ? `${apiBaseUrl}${activeEditingJob.finalPath}`
     : ''
   const finalDownloadUrl = `${apiBaseUrl}/content/videos/${video.id}/final.mp4`
-  const canEdit = activeEditingJob.status === 'draft'
-  const isBusy = saveSettings.isPending || startEditing.isPending
+  const isPrepared = Boolean(activeEditingJob.normalizedPath && activeEditingJob.captionsPath)
+  const isRunning = ['queued', 'processing'].includes(activeEditingJob.status)
+  const canChangeSettings = !isRunning
+  const canPrepare = ['draft', 'failed'].includes(activeEditingJob.status) && !isPrepared
+  const canRender = isPrepared && !isRunning
+  const isBusy = saveSettings.isPending || startEditing.isPending || renderFinal.isPending
   const trimStartSeconds = activeDraft.trimStartMs / 1000
   const trimEndSeconds = activeDraft.trimEndMs / 1000
   const durationSeconds = Math.max(
@@ -145,6 +177,9 @@ export function EditPage({ videoId }: { videoId: string }) {
     activeDraft.trimStartMs >= 0 &&
     activeDraft.trimEndMs > activeDraft.trimStartMs &&
     trimEndSeconds <= durationSeconds
+  const previewDurationSeconds = Math.max(0.1, trimEndSeconds - trimStartSeconds)
+  const showFinal = activeEditingJob.status === 'ready' && Boolean(finalVideoUrl)
+  const previewVideoUrl = showFinal ? finalVideoUrl : normalizedVideoUrl || rawVideoUrl
 
   async function saveDraft() {
     await saveSettings.mutateAsync({
@@ -153,10 +188,20 @@ export function EditPage({ videoId }: { videoId: string }) {
     })
   }
 
-  async function saveAndStart() {
-    if (activeEditingJob.status === 'draft') await saveDraft()
+  async function prepareEdit() {
+    if (activeEditingJob.status === 'draft' || activeEditingJob.status === 'failed') {
+      await saveDraft()
+    }
 
     await startEditing.mutateAsync({
+      params: { id: activeEditingJob.id },
+    })
+  }
+
+  async function renderFinalEdit() {
+    await saveDraft()
+
+    await renderFinal.mutateAsync({
       params: { id: activeEditingJob.id },
     })
   }
@@ -177,7 +222,7 @@ export function EditPage({ videoId }: { videoId: string }) {
             <h1 className="mt-1 text-2xl font-semibold tracking-tight">{video.title}</h1>
           </div>
           <div className="flex flex-wrap gap-2">
-            {canEdit ? (
+            {canChangeSettings ? (
               <Button
                 type="button"
                 variant="outline"
@@ -188,17 +233,18 @@ export function EditPage({ videoId }: { videoId: string }) {
                 Save
               </Button>
             ) : null}
-            {activeEditingJob.status === 'failed' ? (
-              <Button type="button" disabled={isBusy} onClick={saveAndStart}>
+            {canPrepare ? (
+              <Button type="button" disabled={isBusy || !trimValid} onClick={prepareEdit}>
                 <RefreshCcw />
-                Retry
+                {activeEditingJob.status === 'failed' ? 'Retry prepare' : 'Prepare edit'}
               </Button>
-            ) : canEdit ? (
-              <Button type="button" disabled={isBusy || !trimValid} onClick={saveAndStart}>
+            ) : canRender ? (
+              <Button type="button" disabled={isBusy || !trimValid} onClick={renderFinalEdit}>
                 <Play />
-                Start auto edit
+                {activeEditingJob.status === 'failed' ? 'Retry render' : 'Render final'}
               </Button>
-            ) : finalVideoUrl ? (
+            ) : null}
+            {finalVideoUrl ? (
               <a href={finalDownloadUrl} download className={buttonVariants()}>
                 <Download />
                 Download MP4
@@ -209,10 +255,12 @@ export function EditPage({ videoId }: { videoId: string }) {
 
         <div className="grid min-h-0 gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
           <VideoPreview
-            rawVideoUrl={rawVideoUrl}
-            finalVideoUrl={finalVideoUrl}
+            videoUrl={previewVideoUrl}
+            captions={captions.data ?? []}
             draft={activeDraft}
             status={activeEditingJob.status}
+            durationFrames={Math.max(1, Math.ceil(previewDurationSeconds * 30))}
+            showFinal={showFinal}
           />
 
           <aside className="space-y-4 lg:min-h-0 lg:overflow-y-auto">
@@ -220,7 +268,8 @@ export function EditPage({ videoId }: { videoId: string }) {
               draft={activeDraft}
               fontOptions={fontOptions}
               searchOptions={searchableFontOptions}
-              disabled={!canEdit || isBusy}
+              disabled={!canChangeSettings || isBusy}
+              trimDisabled={activeEditingJob.status !== 'draft'}
               durationSeconds={durationSeconds}
               trimStartSeconds={trimStartSeconds}
               trimEndSeconds={trimEndSeconds}

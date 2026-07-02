@@ -120,6 +120,12 @@ const routes = {
     tokens: [{"old":"/content/editing-jobs/:id/start","type":0,"val":"content","end":""},{"old":"/content/editing-jobs/:id/start","type":0,"val":"editing-jobs","end":""},{"old":"/content/editing-jobs/:id/start","type":1,"val":"id","end":""},{"old":"/content/editing-jobs/:id/start","type":0,"val":"start","end":""}],
     types: placeholder as Registry['workspace.start_video_editing_job']['types'],
   },
+  'workspace.render_final_video_editing_job': {
+    methods: ["POST"],
+    pattern: '/content/editing-jobs/:id/render',
+    tokens: [{"old":"/content/editing-jobs/:id/render","type":0,"val":"content","end":""},{"old":"/content/editing-jobs/:id/render","type":0,"val":"editing-jobs","end":""},{"old":"/content/editing-jobs/:id/render","type":1,"val":"id","end":""},{"old":"/content/editing-jobs/:id/render","type":0,"val":"render","end":""}],
+    types: placeholder as Registry['workspace.render_final_video_editing_job']['types'],
+  },
   'workspace.download_final_video': {
     methods: ["GET","HEAD"],
     pattern: '/content/videos/:id/final.mp4',

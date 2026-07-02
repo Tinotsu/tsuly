@@ -235,6 +235,18 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['startVideoEditingJob']>>>
     }
   }
+  'workspace.render_final_video_editing_job': {
+    methods: ["POST"]
+    pattern: '/content/editing-jobs/:id/render'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['renderFinalVideoEditingJob']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#app/content/controllers/workspace_controller').default['renderFinalVideoEditingJob']>>>
+    }
+  }
   'workspace.download_final_video': {
     methods: ["GET","HEAD"]
     pattern: '/content/videos/:id/final.mp4'

@@ -4,7 +4,10 @@ import env from '#start/env'
 
 export type VideoEditingQueueData = {
   editingJobId: string
+  action?: VideoEditingQueueAction
 }
+
+export type VideoEditingQueueAction = 'prepare' | 'render_final'
 
 export const videoEditingQueueName = 'video-editing'
 export const videoEditingJobName = 'edit-video'
@@ -22,7 +25,10 @@ export function createRedisConnection() {
   }
 }
 
-export async function enqueueVideoEditingJob(editingJobId: string) {
+export async function enqueueVideoEditingJob(
+  editingJobId: string,
+  action: VideoEditingQueueAction = 'prepare',
+) {
   const connection = createRedisConnection()
   const queue = new Queue<VideoEditingQueueData, void, typeof videoEditingJobName>(
     videoEditingQueueName,
@@ -32,7 +38,7 @@ export async function enqueueVideoEditingJob(editingJobId: string) {
   try {
     await queue.add(
       videoEditingJobName,
-      { editingJobId },
+      { editingJobId, action },
       {
         attempts: 1,
         removeOnComplete: true,

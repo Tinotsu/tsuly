@@ -28,6 +28,7 @@ export interface ApiDefinition {
     uploadRecording: typeof routes['workspace.upload_recording']
     updateVideoEditingSettings: typeof routes['workspace.update_video_editing_settings']
     startVideoEditingJob: typeof routes['workspace.start_video_editing_job']
+    renderFinalVideoEditingJob: typeof routes['workspace.render_final_video_editing_job']
     downloadFinalVideo: typeof routes['workspace.download_final_video']
     deleteRecording: typeof routes['workspace.delete_recording']
     updateBrandBrainField: typeof routes['workspace.update_brand_brain_field']

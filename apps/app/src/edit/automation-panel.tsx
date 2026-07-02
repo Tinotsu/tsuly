@@ -85,22 +85,28 @@ function automationSteps(editingJob: EditingJob) {
       active: currentStep === 'transcribing',
       done: Boolean(editingJob.transcriptPath),
     },
-    ...(editingJob.settings.removeSilence
-      ? [
-          {
-            label: 'Detect silence',
-            detail: 'Find pauses to remove',
-            active: currentStep === 'detecting_silence',
-            done: afterSilence || Boolean(editingJob.captionsPath),
-          },
-        ]
-      : []),
     {
       label: 'Generate captions',
       detail: 'Build subtitle timings',
       active: currentStep === 'captioning',
       done: Boolean(editingJob.captionsPath),
     },
+    {
+      label: 'Ready to edit',
+      detail: 'Prepared assets are available',
+      active: currentStep === 'prepared',
+      done: ['prepared', 'ready'].includes(editingJob.status),
+    },
+    ...(editingJob.settings.removeSilence
+      ? [
+          {
+            label: 'Detect silence',
+            detail: 'Find pauses to remove',
+            active: currentStep === 'detecting_silence',
+            done: afterSilence || Boolean(editingJob.finalPath),
+          },
+        ]
+      : []),
     {
       label: 'Render MP4',
       detail: 'Export the final edit',

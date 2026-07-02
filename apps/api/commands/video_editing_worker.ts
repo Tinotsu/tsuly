@@ -23,7 +23,7 @@ export default class VideoEditingWorker extends BaseCommand {
     const worker = new Worker<VideoEditingQueueData, void, typeof videoEditingJobName>(
       videoEditingQueueName,
       async job => {
-        await editingService.process(job.data.editingJobId)
+        await editingService.process(job.data.editingJobId, job.data.action ?? 'prepare')
       },
       { connection, concurrency: 1 },
     )

@@ -1,29 +1,30 @@
-import { cn } from '@/lib/utils'
+import { Player } from '@remotion/player'
 
-import { fontFamily } from './caption-fonts'
+import type { EditCaptionCue } from './captions'
+import { EditComposition } from './edit-composition'
 import type { DraftSettings, EditingJob } from './types'
 
 export function VideoPreview({
-  rawVideoUrl,
-  finalVideoUrl,
+  videoUrl,
+  captions,
   draft,
   status,
+  durationFrames,
+  showFinal,
 }: {
-  rawVideoUrl: string
-  finalVideoUrl: string
+  videoUrl: string
+  captions: EditCaptionCue[]
   draft: DraftSettings
   status: EditingJob['status']
+  durationFrames: number
+  showFinal: boolean
 }) {
-  const source = finalVideoUrl || rawVideoUrl
-
   return (
     <div className="rounded-lg border bg-card p-4 lg:flex lg:min-h-0 lg:flex-col">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-muted-foreground">Preview</p>
-          <h2 className="text-lg font-semibold">
-            {status === 'ready' ? 'Final edit' : 'Raw take'}
-          </h2>
+          <h2 className="text-lg font-semibold">{previewTitle(status, showFinal)}</h2>
         </div>
         <span className="rounded-md border bg-background px-2 py-1 text-xs font-medium capitalize">
           {status}
@@ -31,63 +32,34 @@ export function VideoPreview({
       </div>
 
       <div className="mt-4 flex justify-center lg:min-h-0 lg:flex-1">
-        <div className="relative w-full max-w-[320px] overflow-hidden rounded-md bg-black lg:aspect-[9/16] lg:h-full lg:w-auto">
-          {source ? (
-            <video
-              src={source}
-              className="aspect-[9/16] w-full object-cover lg:h-full"
+        <div className="w-full max-w-[320px] overflow-hidden rounded-md bg-black lg:aspect-[9/16] lg:h-full lg:w-auto">
+          {videoUrl ? (
+            <Player
+              component={EditComposition}
+              inputProps={{ videoUrl, captions, settings: draft }}
+              compositionWidth={1080}
+              compositionHeight={1920}
+              durationInFrames={durationFrames}
+              fps={30}
               controls
-              playsInline
-              preload="metadata"
+              style={{
+                width: '100%',
+                height: '100%',
+                aspectRatio: '9 / 16',
+              }}
             />
           ) : (
             <div className="aspect-[9/16] lg:h-full" />
           )}
-          {!finalVideoUrl ? <SubtitlePreview draft={draft} /> : null}
         </div>
       </div>
     </div>
   )
 }
 
-function SubtitlePreview({ draft }: { draft: DraftSettings }) {
-  const positionClass =
-    draft.captionPosition === 'top'
-      ? 'top-[12%]'
-      : draft.captionPosition === 'middle'
-        ? 'top-1/2 -translate-y-1/2'
-        : 'bottom-[10%]'
-
-  return (
-    <div
-      className={cn('pointer-events-none absolute inset-x-5 flex justify-center', positionClass)}
-    >
-      <div
-        className="max-w-full whitespace-pre-line px-3 py-2 text-center font-bold leading-tight"
-        style={{
-          backgroundColor: draft.captionBackgroundEnabled
-            ? rgba(draft.captionBackgroundColor, draft.captionBackgroundOpacity)
-            : 'transparent',
-          color: draft.captionTextColor,
-          fontFamily: fontFamily(draft.captionFont),
-          fontSize: Math.max(17, Math.round(draft.captionFontSize * 0.34)),
-        }}
-      >
-        {lineBreakPreview('Your caption style appears here')}
-      </div>
-    </div>
-  )
-}
-
-function rgba(hex: string, opacity: number) {
-  const value = hex.replace('#', '')
-  const red = Number.parseInt(value.slice(0, 2), 16)
-  const green = Number.parseInt(value.slice(2, 4), 16)
-  const blue = Number.parseInt(value.slice(4, 6), 16)
-
-  return `rgb(${red} ${green} ${blue} / ${opacity / 100})`
-}
-
-function lineBreakPreview(text: string) {
-  return text.replace(' appears ', '\nappears ')
+function previewTitle(status: EditingJob['status'], showFinal: boolean) {
+  if (showFinal) return 'Final edit'
+  if (status === 'prepared') return 'Prepared edit'
+  if (status === 'queued' || status === 'processing') return 'Preparing edit'
+  return 'Raw take'
 }

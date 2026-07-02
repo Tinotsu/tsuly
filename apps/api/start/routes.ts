@@ -34,6 +34,7 @@ defineRouteGroup('content', () => {
   router.post('videos/:id/recordings', [content.Workspace, 'uploadRecording'])
   router.patch('editing-jobs/:id/settings', [content.Workspace, 'updateVideoEditingSettings'])
   router.post('editing-jobs/:id/start', [content.Workspace, 'startVideoEditingJob'])
+  router.post('editing-jobs/:id/render', [content.Workspace, 'renderFinalVideoEditingJob'])
   router.get('videos/:id/final.mp4', [content.Workspace, 'downloadFinalVideo'])
   router.delete('videos/:videoId/recordings/:recordingId', [content.Workspace, 'deleteRecording'])
   router.patch('brand-brain-fields/:id', [content.Workspace, 'updateBrandBrainField'])

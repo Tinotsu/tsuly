@@ -48,8 +48,19 @@ type CaptionRenderSettings = {
   wordsPerCaption: number
 }
 
+export type VideoEditingAction = 'prepare' | 'render_final'
+
 export default class VideoEditingService {
-  async process(editingJobId: string) {
+  async process(editingJobId: string, action: VideoEditingAction = 'prepare') {
+    if (action === 'render_final') {
+      await this.renderFinalEdit(editingJobId)
+      return
+    }
+
+    await this.prepareEdit(editingJobId)
+  }
+
+  private async prepareEdit(editingJobId: string) {
     const editingJob = await VideoEditingJob.findOrFail(editingJobId)
     const video = await Video.findOrFail(editingJob.videoId)
     const recording = await VideoRecording.findOrFail(editingJob.recordingId)
@@ -60,18 +71,22 @@ export default class VideoEditingService {
 
     editingJob.status = 'processing'
     editingJob.currentStep = 'normalizing'
+    editingJob.normalizedPath = null
+    editingJob.audioPath = null
+    editingJob.transcriptPath = null
+    editingJob.captionsPath = null
+    editingJob.finalPath = null
     editingJob.startedAt = DateTime.now()
+    editingJob.finishedAt = null
     editingJob.errorMessage = null
     await editingJob.save()
 
     try {
-      const originalPath = app.publicPath(editingJob.originalPath.replace(/^\/+/, ''))
+      const originalPath = publicFilePath(editingJob.originalPath)
       const normalizedPath = join(outputDir, 'normalized.mp4')
       const audioPath = join(outputDir, 'audio.wav')
       const transcriptPath = join(outputDir, 'transcript.json')
-      const silencePath = join(outputDir, 'silences.json')
       const captionsPath = join(outputDir, 'captions.srt')
-      const finalPath = join(outputDir, 'final.mp4')
 
       await this.normalizeVideo(originalPath, normalizedPath, recording)
       editingJob.normalizedPath = `/${outputPublicDir}/normalized.mp4`
@@ -86,13 +101,75 @@ export default class VideoEditingService {
       const transcript = await this.transcribeAudio(audioPath)
       await writeFile(transcriptPath, JSON.stringify(transcript, null, 2))
       editingJob.transcriptPath = `/${outputPublicDir}/transcript.json`
-      editingJob.currentStep = editingJob.removeSilence ? 'detecting_silence' : 'captioning'
+      editingJob.currentStep = 'captioning'
       await editingJob.save()
+
+      const captions = captionsFromTranscript(
+        transcript.segments ?? [],
+        [],
+        editingJob.wordsPerCaption,
+      )
+      await writeFile(captionsPath, formatSrt(captions))
+      editingJob.captionsPath = `/${outputPublicDir}/captions.srt`
+      editingJob.status = 'prepared'
+      editingJob.currentStep = 'prepared'
+      editingJob.finishedAt = DateTime.now()
+      await editingJob.save()
+
+      video.preview = 'Prepared for editing'
+      await video.save()
+      await video.related('editing').query().whereIn('label', ['Captions']).update({ done: true })
+    } catch (error) {
+      editingJob.status = 'failed'
+      editingJob.currentStep = 'failed'
+      editingJob.errorMessage = error instanceof Error ? error.message : String(error)
+      editingJob.finishedAt = DateTime.now()
+      await editingJob.save()
+
+      video.preview = 'Auto-edit failed'
+      await video.save()
+
+      throw error
+    }
+  }
+
+  private async renderFinalEdit(editingJobId: string) {
+    const editingJob = await VideoEditingJob.findOrFail(editingJobId)
+    const video = await Video.findOrFail(editingJob.videoId)
+    const outputPublicDir = `uploads/edits/${editingJob.id}`
+    const outputDir = app.publicPath(outputPublicDir)
+
+    if (!editingJob.normalizedPath || !editingJob.audioPath || !editingJob.transcriptPath) {
+      throw new Error('Prepare edit before rendering final')
+    }
+
+    await mkdir(outputDir, { recursive: true })
+
+    editingJob.status = 'processing'
+    editingJob.currentStep = editingJob.removeSilence ? 'detecting_silence' : 'captioning'
+    editingJob.finalPath = null
+    editingJob.startedAt = DateTime.now()
+    editingJob.finishedAt = null
+    editingJob.errorMessage = null
+    await editingJob.save()
+
+    try {
+      const normalizedPath = publicFilePath(editingJob.normalizedPath)
+      const audioPath = publicFilePath(editingJob.audioPath)
+      const transcript = JSON.parse(
+        await readFile(publicFilePath(editingJob.transcriptPath), 'utf8'),
+      ) as WhisperTranscript
+      const silencePath = join(outputDir, 'silences.json')
+      const captionsPath = join(outputDir, 'captions.srt')
+      const finalPath = join(outputDir, 'final.mp4')
 
       const silences = editingJob.removeSilence
         ? await this.detectSilences(audioPath, editingJob.silenceThresholdSeconds)
         : []
       await writeFile(silencePath, JSON.stringify(silences, null, 2))
+
+      editingJob.currentStep = 'captioning'
+      await editingJob.save()
 
       const captions = captionsFromTranscript(
         transcript.segments ?? [],
@@ -127,7 +204,7 @@ export default class VideoEditingService {
       editingJob.finishedAt = DateTime.now()
       await editingJob.save()
 
-      video.preview = 'Auto-edit failed'
+      video.preview = 'Final render failed'
       await video.save()
 
       throw error
@@ -539,6 +616,10 @@ function keepExpressionForSilences(silences: SilenceRange[]) {
   return `not(${silences
     .map(silence => `between(t\\,${silence.start.toFixed(3)}\\,${silence.end.toFixed(3)})`)
     .join('+')})`
+}
+
+function publicFilePath(path: string) {
+  return app.publicPath(path.replace(/^\/+/, ''))
 }
 
 function ffmpegPath() {
