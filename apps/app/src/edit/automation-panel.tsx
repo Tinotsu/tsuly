@@ -21,11 +21,11 @@ export function AutomationPanel({ editingJob }: { editingJob: EditingJob }) {
         </p>
       ) : null}
 
-      <div className="mt-3 overflow-x-auto">
-        <div className="relative flex min-w-[440px] items-center px-8 py-1">
-          <div className="absolute left-8 right-8 top-1/2 h-px -translate-y-1/2 bg-border" />
+      <div className="mt-3 overflow-x-auto pb-1">
+        <div className="relative flex min-w-[760px] items-start px-6 pt-1">
+          <div className="absolute left-12 right-12 top-4 h-px bg-border" />
           {steps.map(step => (
-            <div key={step.label} className="relative flex flex-1 justify-center">
+            <div key={step.label} className="relative flex flex-1 flex-col items-center gap-2 px-1">
               <span
                 title={`${step.label}: ${step.detail}`}
                 className={cn(
@@ -42,6 +42,12 @@ export function AutomationPanel({ editingJob }: { editingJob: EditingJob }) {
                   <Circle className="size-3" />
                 )}
               </span>
+              <div className="max-w-28 text-center">
+                <p className="text-xs font-medium leading-tight">{step.label}</p>
+                <p className="mt-0.5 text-[11px] leading-tight text-muted-foreground">
+                  {step.detail}
+                </p>
+              </div>
             </div>
           ))}
         </div>
